@@ -1,0 +1,3761 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>
+        PATYCA ERP
+    </title>
+
+
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+    >
+
+
+    <link
+        rel="stylesheet"
+        href="css/dashboard.css"
+    >
+
+</head>
+
+
+<body>
+
+
+<div class="app">
+
+
+    <!-- ==================================================
+         SIDEBAR
+    =================================================== -->
+
+    <aside
+        class="sidebar"
+        id="sidebar"
+    >
+
+
+        <div class="brand">
+
+            <div class="brand-logo">
+                P
+            </div>
+
+
+            <div>
+
+                <div class="brand-name">
+                    PATYCA ERP
+                </div>
+
+                <div class="brand-sub">
+                    Sistema de gestión
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <nav
+            class="nav"
+            id="nav"
+        >
+
+
+            <!-- DASHBOARD -->
+
+            <button
+                class="nav-main active"
+                data-view="inicio"
+            >
+
+                <span class="nav-icon">
+                    ▦
+                </span>
+
+                <span>
+                    Dashboard
+                </span>
+
+            </button>
+
+
+
+            <!-- COMERCIAL -->
+
+            <div
+                class="nav-group"
+                id="groupComercial"
+            >
+
+                <button
+                    class="nav-group-title"
+                    onclick="
+                    toggleNavGroup(
+                        'groupComercial'
+                    )
+                    "
+                >
+
+                    <span>
+                        COMERCIAL
+                    </span>
+
+                    <b>
+                        ⌄
+                    </b>
+
+                </button>
+
+
+                <div class="nav-group-items">
+
+                    <button data-view="catalogo">
+
+                        <span class="nav-icon">
+                            ◫
+                        </span>
+
+                        Catálogo
+
+                    </button>
+
+
+                    <button data-view="ventas">
+
+                        <span class="nav-icon">
+                            ◉
+                        </span>
+
+                        Ventas
+
+                    </button>
+
+
+                    <button data-view="cotizaciones">
+
+                        <span class="nav-icon">
+                            ▤
+                        </span>
+
+                        Cotizaciones
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- INVENTARIO -->
+
+            <div
+                class="nav-group"
+                id="groupInventario"
+            >
+
+                <button
+                    class="nav-group-title"
+                    onclick="
+                    toggleNavGroup(
+                        'groupInventario'
+                    )
+                    "
+                >
+
+                    <span>
+                        INVENTARIO
+                    </span>
+
+                    <b>
+                        ⌄
+                    </b>
+
+                </button>
+
+
+                <div class="nav-group-items">
+
+                    <button data-view="inventario">
+
+                        <span class="nav-icon">
+                            ▣
+                        </span>
+
+                        Existencias y bodegas
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- PRODUCCIÓN -->
+
+            <div
+                class="nav-group"
+                id="groupProduccion"
+            >
+
+                <button
+                    class="nav-group-title"
+                    onclick="
+                    toggleNavGroup(
+                        'groupProduccion'
+                    )
+                    "
+                >
+
+                    <span>
+                        PRODUCCIÓN
+                    </span>
+
+                    <b>
+                        ⌄
+                    </b>
+
+                </button>
+
+
+                <div class="nav-group-items">
+
+                    <button data-view="ordenes">
+
+                        <span class="nav-icon">
+                            ☷
+                        </span>
+
+                        Órdenes
+
+                    </button>
+
+
+                    <button data-view="produccion">
+
+                        <span class="nav-icon">
+                            ⌁
+                        </span>
+
+                        Rendimiento y merma
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- ABASTECIMIENTO -->
+
+            <div
+                class="nav-group"
+                id="groupAbastecimiento"
+            >
+
+                <button
+                    class="nav-group-title"
+                    onclick="
+                    toggleNavGroup(
+                        'groupAbastecimiento'
+                    )
+                    "
+                >
+
+                    <span>
+                        ABASTECIMIENTO
+                    </span>
+
+                    <b>
+                        ⌄
+                    </b>
+
+                </button>
+
+
+                <div class="nav-group-items">
+
+                    <button data-view="compras">
+
+                        <span class="nav-icon">
+                            ▤
+                        </span>
+
+                        Compras y proveedores
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- FINANZAS -->
+
+            <div
+                class="nav-group"
+                id="groupFinanzas"
+            >
+
+                <button
+                    class="nav-group-title"
+                    onclick="
+                    toggleNavGroup(
+                        'groupFinanzas'
+                    )
+                    "
+                >
+
+                    <span>
+                        FINANZAS
+                    </span>
+
+                    <b>
+                        ⌄
+                    </b>
+
+                </button>
+
+
+                <div class="nav-group-items">
+
+                    <button data-view="finanzas">
+
+                        <span class="nav-icon">
+                            $
+                        </span>
+
+                        Dashboard financiero
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- ANALÍTICA -->
+
+            <div
+                class="nav-group"
+                id="groupAnalitica"
+            >
+
+                <button
+                    class="nav-group-title"
+                    onclick="
+                    toggleNavGroup(
+                        'groupAnalitica'
+                    )
+                    "
+                >
+
+                    <span>
+                        ANALÍTICA
+                    </span>
+
+                    <b>
+                        ⌄
+                    </b>
+
+                </button>
+
+
+                <div class="nav-group-items">
+
+                    <button data-view="reportes">
+
+                        <span class="nav-icon">
+                            ▥
+                        </span>
+
+                        Reportes
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- SISTEMA -->
+
+            <div
+                class="nav-group"
+                id="groupSistema"
+            >
+
+                <button
+                    class="nav-group-title"
+                    onclick="
+                    toggleNavGroup(
+                        'groupSistema'
+                    )
+                    "
+                >
+
+                    <span>
+                        SISTEMA
+                    </span>
+
+                    <b>
+                        ⌄
+                    </b>
+
+                </button>
+
+
+                <div class="nav-group-items">
+
+                    <button data-view="notificaciones">
+
+                        <span class="nav-icon">
+                            !
+                        </span>
+
+                        Notificaciones
+
+                    </button>
+
+
+                    <button data-view="configuracion">
+
+                        <span class="nav-icon">
+                            ⚙
+                        </span>
+
+                        Configuración
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+        </nav>
+
+
+
+        <div class="sidebar-footer">
+
+            <button
+                class="logout-btn"
+                id="logoutBtn"
+            >
+                Cerrar sesión
+            </button>
+
+        </div>
+
+
+    </aside>
+
+
+
+    <!-- ==================================================
+         MAIN
+    =================================================== -->
+
+    <main class="main">
+
+
+        <!-- TOPBAR -->
+
+        <header class="topbar">
+
+
+            <div class="topbar-left">
+
+
+                <button
+                    class="menu-btn"
+                    id="menuBtn"
+                >
+                    ☰
+                </button>
+
+
+                <div>
+
+                    <div class="breadcrumb-label">
+                        PATYCA ERP
+                    </div>
+
+                    <div
+                        class="breadcrumb"
+                        id="breadcrumb"
+                    >
+                        Inicio
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="topbar-search">
+
+                <input
+                    id="globalSearch"
+                    placeholder="Buscar en PATYCA..."
+                >
+
+            </div>
+
+
+
+            <div class="topbar-actions">
+
+
+                <!-- ACCIÓN RÁPIDA -->
+
+                <div
+                    class="quick-action-wrapper"
+                    id="quickActionWrapper"
+                >
+
+                    <button
+                        class="
+                        btn
+                        btn-primary
+                        quick-action-btn
+                        "
+                        onclick="
+                        toggleQuickMenu()
+                        "
+                    >
+                        + Nuevo
+                    </button>
+
+
+                    <div
+                        class="quick-menu"
+                        id="quickMenu"
+                    >
+
+                        <button
+                            onclick="
+                            ejecutarAccionRapida(
+                                'venta'
+                            )
+                            "
+                        >
+                            Nueva venta
+                        </button>
+
+
+                        <button
+                            onclick="
+                            ejecutarAccionRapida(
+                                'cotizacion'
+                            )
+                            "
+                        >
+                            Nueva cotización
+                        </button>
+
+
+                        <button
+                            onclick="
+                            ejecutarAccionRapida(
+                                'compra'
+                            )
+                            "
+                        >
+                            Nueva compra
+                        </button>
+
+
+                        <button
+                            onclick="
+                            ejecutarAccionRapida(
+                                'gasto'
+                            )
+                            "
+                        >
+                            Nuevo gasto
+                        </button>
+
+
+                        <button
+                            onclick="
+                            ejecutarAccionRapida(
+                                'material'
+                            )
+                            "
+                        >
+                            Nuevo material
+                        </button>
+
+
+                        <button
+                            onclick="
+                            ejecutarAccionRapida(
+                                'stock'
+                            )
+                            "
+                        >
+                            Actualizar stock
+                        </button>
+
+
+                        <button
+                            onclick="
+                            ejecutarAccionRapida(
+                                'orden'
+                            )
+                            "
+                        >
+                            Nueva orden producción
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- NOTIFICACIONES -->
+
+                <button
+                    class="notification-button"
+                    onclick="
+                    abrirNotificaciones()
+                    "
+                >
+
+                    🔔
+
+                    <span id="notificationCount">
+                        0
+                    </span>
+
+                </button>
+
+
+
+                <!-- USUARIO -->
+
+                <div class="user-box">
+
+                    <div
+                        class="user-avatar"
+                        id="userAvatar"
+                    >
+                        US
+                    </div>
+
+
+                    <div>
+
+                        <strong id="userNameText">
+                            Usuario
+                        </strong>
+
+                        <span id="userRole">
+                            Rol
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+        </header>
+
+
+
+        <!-- ==================================================
+             DASHBOARD
+        =================================================== -->
+
+        <section
+            id="view-inicio"
+            class="view"
+        >
+
+
+            <div class="page-head">
+
+                <div>
+
+                    <h1 class="page-title">
+                        Dashboard ejecutivo
+                    </h1>
+
+                    <p class="page-desc">
+                        Resumen comercial, financiero,
+                        inventario y producción.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+
+            <div
+                class="cards"
+                id="inicioCards"
+            ></div>
+
+
+
+            <div class="erp-dashboard-grid">
+
+
+                <div class="panel span-2">
+
+                    <div class="panel-title-row">
+
+                        <div>
+
+                            <span class="eyebrow">
+                                FINANZAS
+                            </span>
+
+                            <h3>
+                                Ingresos vs egresos
+                            </h3>
+
+                        </div>
+
+
+                        <button
+                            class="link-button"
+                            onclick="
+                            showView(
+                                'finanzas'
+                            )
+                            "
+                        >
+                            Ver finanzas →
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        id="graficoIngresosEgresos"
+                        class="dashboard-chart"
+                    ></div>
+
+                </div>
+
+
+
+                <div class="panel">
+
+                    <div class="panel-title-row">
+
+                        <div>
+
+                            <span class="eyebrow">
+                                COMERCIAL
+                            </span>
+
+                            <h3>
+                                Últimas ventas
+                            </h3>
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        id="inicioUltimasVentas"
+                    ></div>
+
+                </div>
+
+
+
+                <div class="panel">
+
+                    <div class="panel-title-row">
+
+                        <div>
+
+                            <span class="eyebrow">
+                                PENDIENTES
+                            </span>
+
+                            <h3>
+                                Qué requiere atención
+                            </h3>
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        id="inicioPendientes"
+                    ></div>
+
+                </div>
+
+
+
+                <div class="panel span-2">
+
+                    <div class="panel-title-row">
+
+                        <div>
+
+                            <span class="eyebrow">
+                                AUDITORÍA
+                            </span>
+
+                            <h3>
+                                Actividad reciente
+                            </h3>
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        id="inicioActividad"
+                    ></div>
+
+                </div>
+
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- ==================================================
+             CATÁLOGO
+        =================================================== -->
+
+        <section
+            id="view-catalogo"
+            class="view"
+            style="display:none"
+        >
+
+            <h1 class="page-title">
+                Catálogo y precios
+            </h1>
+
+            <p class="page-desc">
+                Líneas de uniformes, fichas,
+                precios, stock y costos.
+            </p>
+
+
+            <div
+                class="selector-grid"
+                id="catalogoLineasGrid"
+            ></div>
+
+
+            <div
+                id="catalogoSeleccionActual"
+                class="selection-area"
+            ></div>
+
+
+            <div
+                class="product-grid"
+                id="catalogoGrid"
+            ></div>
+
+        </section>
+
+
+
+        <!-- ==================================================
+             VENTAS
+        =================================================== -->
+
+        <section
+            id="view-ventas"
+            class="view"
+            style="display:none"
+        >
+
+
+            <div class="page-head">
+
+                <div>
+
+                    <h1 class="page-title">
+                        Ventas
+                    </h1>
+
+                    <p class="page-desc">
+                        Registro de ventas
+                        conectado con inventario y finanzas.
+                    </p>
+
+                </div>
+
+
+                <button
+                    class="btn btn-primary"
+                    onclick="
+                    openVentaModal()
+                    "
+                >
+                    + Nueva venta
+                </button>
+
+            </div>
+
+
+            <div
+                class="cards"
+                id="ventasCards"
+            ></div>
+
+
+            <div class="panel">
+
+                <div class="table-wrap">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>Fecha</th>
+                                <th>Código</th>
+                                <th>Línea</th>
+                                <th>Producto</th>
+                                <th>Talla</th>
+                                <th>Cantidad</th>
+                                <th>Total</th>
+                                <th>Pago</th>
+                                <th></th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="tablaVentas"></tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- ==================================================
+             COTIZACIONES
+        =================================================== -->
+
+        <section
+            id="view-cotizaciones"
+            class="view"
+            style="display:none"
+        >
+
+
+            <div class="page-head">
+
+                <div>
+
+                    <h1 class="page-title">
+                        Cotizaciones
+                    </h1>
+
+                    <p class="page-desc">
+                        Presupuestos comerciales,
+                        seguimiento de estado
+                        y conversión a venta.
+                    </p>
+
+                </div>
+
+
+                <button
+                    class="btn btn-primary"
+                    onclick="
+                    openCotizacionModal()
+                    "
+                >
+                    + Nueva cotización
+                </button>
+
+            </div>
+
+
+
+            <div
+                class="cards"
+                id="cotizacionesCards"
+            ></div>
+
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Fecha</th>
+                            <th>Código</th>
+                            <th>Referencia</th>
+                            <th>Ítems</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th>Cambiar estado</th>
+                            <th>Acciones</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody
+                        id="tablaCotizaciones"
+                    ></tbody>
+
+                </table>
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- ==================================================
+             INVENTARIO
+        =================================================== -->
+
+        <section
+            id="view-inventario"
+            class="view"
+            style="display:none"
+        >
+
+
+            <div class="page-head">
+
+                <div>
+
+                    <h1 class="page-title">
+                        Inventario y bodegas
+                    </h1>
+
+                    <p class="page-desc">
+                        Materiales, prendas,
+                        mínimos, objetivos y trazabilidad.
+                    </p>
+
+                </div>
+
+
+                <div class="actions">
+
+                    <button
+                        class="btn"
+                        onclick="
+                        openStockModal()
+                        "
+                    >
+                        Actualizar material
+                    </button>
+
+
+                    <button
+                        class="btn"
+                        onclick="
+                        openStockPrendaModal()
+                        "
+                    >
+                        Stock prendas
+                    </button>
+
+
+                    <button
+                        class="btn btn-primary"
+                        onclick="
+                        openMaterialModal()
+                        "
+                    >
+                        + Material
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <div
+                class="cards"
+                id="inventarioCards"
+            ></div>
+
+
+
+            <h2 class="section-title">
+                Bodegas del taller
+            </h2>
+
+
+            <div
+                class="warehouse-grid"
+                id="bodegasGrid"
+            ></div>
+
+
+
+            <h2 class="section-title">
+                Telas e insumos
+            </h2>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Código</th>
+                            <th>Tipo</th>
+                            <th>Material</th>
+                            <th>Proveedor</th>
+                            <th>Stock</th>
+                            <th>Mínimo</th>
+                            <th>Objetivo</th>
+                            <th>Bodega</th>
+                            <th>Estado</th>
+                            <th>Reposición sugerida</th>
+                            <th></th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody
+                        id="tablaMateriales"
+                    ></tbody>
+
+                </table>
+
+            </div>
+
+
+
+            <h2 class="section-title">
+                Prendas terminadas
+            </h2>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Línea</th>
+                            <th>Producto</th>
+                            <th>Talla</th>
+                            <th>Stock</th>
+                            <th>Mínimo</th>
+                            <th>Objetivo</th>
+                            <th>Estado</th>
+                            <th>Reposición sugerida</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody
+                        id="tablaStockPrendas"
+                    ></tbody>
+
+                </table>
+
+            </div>
+
+
+
+            <h2 class="section-title">
+                Movimientos de inventario
+            </h2>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Movimiento</th>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Ítem</th>
+                            <th>Cantidad</th>
+                            <th>Stock anterior</th>
+                            <th>Stock nuevo</th>
+                            <th>Referencia</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody
+                        id="tablaMovimientosInventario"
+                    ></tbody>
+
+                </table>
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- ==================================================
+             ÓRDENES
+        =================================================== -->
+
+        <section
+            id="view-ordenes"
+            class="view"
+            style="display:none"
+        >
+
+
+            <div class="page-head">
+
+                <div>
+
+                    <h1 class="page-title">
+                        Órdenes de producción
+                    </h1>
+
+                    <p class="page-desc">
+                        Seguimiento del proceso productivo.
+                    </p>
+
+                </div>
+
+
+                <button
+                    class="btn btn-primary"
+                    onclick="
+                    openOrdenModal()
+                    "
+                >
+                    + Nueva orden
+                </button>
+
+            </div>
+
+
+            <div
+                class="cards"
+                id="ordenesCards"
+            ></div>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Orden</th>
+                            <th>Fecha</th>
+                            <th>Línea</th>
+                            <th>Producto</th>
+                            <th>Talla</th>
+                            <th>Cantidad</th>
+                            <th>Estado</th>
+                            <th>Cambiar estado</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody
+                        id="tablaOrdenes"
+                    ></tbody>
+
+                </table>
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- ==================================================
+             PRODUCCIÓN
+        =================================================== -->
+
+        <section
+            id="view-produccion"
+            class="view"
+            style="display:none"
+        >
+
+
+            <h1 class="page-title">
+                Rendimiento y merma
+            </h1>
+
+            <p class="page-desc">
+                Análisis del consumo de tela
+                y eficiencia de producción.
+            </p>
+
+
+
+            <div class="calculator-grid">
+
+
+                <div class="panel">
+
+                    <span class="eyebrow">
+                        CALCULADORA
+                    </span>
+
+                    <h3>
+                        Datos de producción
+                    </h3>
+
+
+                    <div class="field">
+
+                        <label>
+                            Establecimiento / línea
+                        </label>
+
+                        <select
+                            id="prod_establecimiento"
+                        ></select>
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            Prenda
+                        </label>
+
+                        <select
+                            id="prod_prenda"
+                        ></select>
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            Talla
+                        </label>
+
+                        <select
+                            id="prod_talla"
+                        ></select>
+
+                    </div>
+
+
+
+                    <div class="field-row">
+
+
+                        <div class="field">
+
+                            <label>
+                                Tela inicial (kg)
+                            </label>
+
+                            <input
+                                id="prod_inicial"
+                                type="number"
+                                step="0.0001"
+                            >
+
+                        </div>
+
+
+                        <div class="field">
+
+                            <label>
+                                Sobrante reutilizable (kg)
+                            </label>
+
+                            <input
+                                id="prod_sobrante"
+                                type="number"
+                                step="0.0001"
+                            >
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <div class="field-row">
+
+
+                        <div class="field">
+
+                            <label>
+                                Cantidad fabricada
+                            </label>
+
+                            <input
+                                id="prod_cantidad"
+                                type="number"
+                            >
+
+                        </div>
+
+
+                        <div class="field">
+
+                            <label>
+                                Peso unitario (g)
+                            </label>
+
+                            <input
+                                id="prod_peso"
+                                type="number"
+                            >
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <div class="field">
+
+                        <label>
+                            Precio tela ($/kg)
+                        </label>
+
+                        <input
+                            id="prod_precio"
+                            type="number"
+                        >
+
+                    </div>
+
+
+                    <div class="actions">
+
+                        <button
+                            class="btn btn-primary"
+                            onclick="
+                            calcularProduccion()
+                            "
+                        >
+                            Calcular
+                        </button>
+
+
+                        <button
+                            class="btn"
+                            onclick="
+                            guardarCalculoProduccion()
+                            "
+                        >
+                            Guardar registro
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="panel">
+
+                    <span class="eyebrow">
+                        RESULTADOS
+                    </span>
+
+                    <h3>
+                        Indicadores calculados
+                    </h3>
+
+
+                    <div
+                        class="results-grid"
+                        id="resultadoProduccion"
+                    >
+
+                        <div class="empty">
+                            Ingresa los datos
+                            y presiona Calcular.
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+
+            <h2 class="section-title">
+                Historial de producción
+            </h2>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Código</th>
+                            <th>Fecha</th>
+                            <th>Línea</th>
+                            <th>Prenda</th>
+                            <th>Talla</th>
+                            <th>Cantidad</th>
+                            <th>Pérdida</th>
+                            <th>Aprovechamiento</th>
+                            <th>Rendimiento</th>
+                            <th>Costo pérdida</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody
+                        id="tablaProduccion"
+                    ></tbody>
+
+                </table>
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- ==================================================
+             COMPRAS
+        =================================================== -->
+
+        <section
+            id="view-compras"
+            class="view"
+            style="display:none"
+        >
+
+
+            <div class="page-head">
+
+                <div>
+
+                    <h1 class="page-title">
+                        Compras y proveedores
+                    </h1>
+
+                    <p class="page-desc">
+                        Abastecimiento,
+                        proveedores y cuentas pendientes.
+                    </p>
+
+                </div>
+
+
+                <button
+                    class="btn btn-primary"
+                    onclick="
+                    openCompraModal()
+                    "
+                >
+                    + Registrar compra
+                </button>
+
+            </div>
+
+
+            <div
+                class="selector-grid"
+                id="proveedoresGrid"
+            ></div>
+
+
+            <div
+                id="proveedorSeleccionActual"
+                class="selection-area"
+            ></div>
+
+
+            <div id="proveedorDetalle"></div>
+
+
+
+            <h2 class="section-title">
+                Compras registradas
+            </h2>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Código</th>
+                            <th>Fecha</th>
+                            <th>Proveedor</th>
+                            <th>Material</th>
+                            <th>Cantidad</th>
+                            <th>Precio unitario</th>
+                            <th>Total</th>
+                            <th>Documento</th>
+                            <th>Estado</th>
+                            <th></th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="tablaCompras"></tbody>
+
+                </table>
+
+            </div>
+
+
+
+            <h2 class="section-title">
+                Compras de referencia
+            </h2>
+
+
+            <div class="alert-box">
+
+                Estas compras son antecedentes históricos
+                y no representan el stock físico actual.
+
+            </div>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Proveedor</th>
+                            <th>Material</th>
+                            <th>Cantidad</th>
+                            <th>Precio unitario</th>
+                            <th>Total</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody
+                        id="tablaComprasReferencia"
+                    ></tbody>
+
+                </table>
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- ==================================================
+             FINANZAS
+        =================================================== -->
+
+        <section
+            id="view-finanzas"
+            class="view"
+            style="display:none"
+        >
+
+
+            <div class="page-head">
+
+                <div>
+
+                    <h1 class="page-title">
+                        Dashboard financiero
+                    </h1>
+
+                    <p class="page-desc">
+                        Ingresos, egresos,
+                        cuentas por pagar,
+                        saldo y resultados.
+                    </p>
+
+                </div>
+
+
+                <button
+                    class="btn btn-primary"
+                    onclick="
+                    openGastoModal()
+                    "
+                >
+                    + Registrar gasto
+                </button>
+
+            </div>
+
+
+
+            <div
+                class="cards"
+                id="finanzasCards"
+            ></div>
+
+
+
+            <div class="finance-grid">
+
+
+                <div class="panel">
+
+                    <span class="eyebrow">
+                        FLUJO
+                    </span>
+
+                    <h3>
+                        Evolución del saldo
+                    </h3>
+
+                    <div
+                        class="finance-chart"
+                        id="graficoFinanzas"
+                    ></div>
+
+                </div>
+
+
+                <div class="panel">
+
+                    <span class="eyebrow">
+                        COMPARACIÓN
+                    </span>
+
+                    <h3>
+                        Ingresos vs egresos
+                    </h3>
+
+                    <div
+                        class="dashboard-chart"
+                        id="graficoIngresosEgresos"
+                    ></div>
+
+                </div>
+
+
+            </div>
+
+
+
+            <h2 class="section-title">
+                Resumen mensual
+            </h2>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Mes</th>
+                            <th>Ventas</th>
+                            <th>Gastos</th>
+                            <th>Compras pagadas</th>
+                            <th>Resultado</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody
+                        id="tablaResumenMensual"
+                    ></tbody>
+
+                </table>
+
+            </div>
+
+
+
+            <h2 class="section-title">
+                Flujo financiero
+            </h2>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Categoría</th>
+                            <th>Concepto</th>
+                            <th>Monto</th>
+                            <th>Saldo</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody
+                        id="tablaMovimientosFinanzas"
+                    ></tbody>
+
+                </table>
+
+            </div>
+
+
+
+            <h2 class="section-title">
+                Gastos registrados
+            </h2>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Fecha</th>
+                            <th>Código</th>
+                            <th>Categoría</th>
+                            <th>Concepto</th>
+                            <th>Monto</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody
+                        id="tablaGastos"
+                    ></tbody>
+
+                </table>
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- ==================================================
+             NOTIFICACIONES
+        =================================================== -->
+
+        <section
+            id="view-notificaciones"
+            class="view"
+            style="display:none"
+        >
+
+            <h1 class="page-title">
+                Centro de notificaciones
+            </h1>
+
+            <p class="page-desc">
+                Alertas y eventos
+                que requieren atención.
+            </p>
+
+
+            <div
+                class="cards"
+                id="notificationSummary"
+            ></div>
+
+
+            <div
+                id="notificacionesLista"
+            ></div>
+
+        </section>
+
+
+
+        <!-- ==================================================
+             REPORTES
+        =================================================== -->
+
+        <section
+            id="view-reportes"
+            class="view"
+            style="display:none"
+        >
+
+            <h1 class="page-title">
+                Analítica y reportes
+            </h1>
+
+            <p class="page-desc">
+                Información consolidada
+                y exportación de datos.
+            </p>
+
+
+            <div
+                class="cards"
+                id="reportesCards"
+            ></div>
+
+
+            <div class="dashboard-grid">
+
+
+                <div class="panel">
+
+                    <span class="eyebrow">
+                        RANKING
+                    </span>
+
+                    <h3>
+                        Top productos vendidos
+                    </h3>
+
+                    <div id="topProductos"></div>
+
+                </div>
+
+
+                <div class="panel">
+
+                    <span class="eyebrow">
+                        EXPORTACIÓN
+                    </span>
+
+                    <h3>
+                        Descargar información
+                    </h3>
+
+
+                    <div class="report-buttons">
+
+                        <button
+                            class="btn"
+                            onclick="
+                            exportarVentasCSV()
+                            "
+                        >
+                            Ventas CSV
+                        </button>
+
+
+                        <button
+                            class="btn"
+                            onclick="
+                            exportarInventarioCSV()
+                            "
+                        >
+                            Inventario CSV
+                        </button>
+
+
+                        <button
+                            class="btn"
+                            onclick="
+                            exportarComprasCSV()
+                            "
+                        >
+                            Compras CSV
+                        </button>
+
+
+                        <button
+                            class="btn"
+                            onclick="
+                            exportarProduccionCSV()
+                            "
+                        >
+                            Producción CSV
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- ==================================================
+             CONFIGURACIÓN
+        =================================================== -->
+
+        <section
+            id="view-configuracion"
+            class="view"
+            style="display:none"
+        >
+
+            <h1 class="page-title">
+                Configuración
+            </h1>
+
+            <p class="page-desc">
+                Parámetros generales del ERP.
+            </p>
+
+
+            <div class="settings-grid">
+
+
+                <div class="panel">
+
+                    <span class="eyebrow">
+                        EMPRESA
+                    </span>
+
+                    <h3>
+                        Datos generales
+                    </h3>
+
+
+                    <div class="field">
+
+                        <label>
+                            Nombre
+                        </label>
+
+                        <input id="cfg_empresa">
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            Taller
+                        </label>
+
+                        <input id="cfg_taller">
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="panel">
+
+                    <span class="eyebrow">
+                        INVENTARIO
+                    </span>
+
+                    <h3>
+                        Bodegas
+                    </h3>
+
+
+                    <div class="field">
+
+                        <label>
+                            Bodega 1
+                        </label>
+
+                        <input id="cfg_bodega1">
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            Bodega 2
+                        </label>
+
+                        <input id="cfg_bodega2">
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            Bodega 3
+                        </label>
+
+                        <input id="cfg_bodega3">
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="panel">
+
+                    <span class="eyebrow">
+                        ALERTAS
+                    </span>
+
+                    <h3>
+                        Parámetros
+                    </h3>
+
+
+                    <div class="field">
+
+                        <label>
+                            % preventivo stock
+                        </label>
+
+                        <input
+                            id="cfg_stock_advertencia"
+                            type="number"
+                        >
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            Días aviso vencimiento
+                        </label>
+
+                        <input
+                            id="cfg_dias_vencimiento"
+                            type="number"
+                        >
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="panel">
+
+                    <span class="eyebrow">
+                        FINANZAS
+                    </span>
+
+                    <h3>
+                        Saldo inicial
+                    </h3>
+
+
+                    <div class="field">
+
+                        <label>
+                            Monto
+                        </label>
+
+                        <input
+                            id="cfg_saldo_inicial"
+                            type="number"
+                        >
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label>
+                            Fecha
+                        </label>
+
+                        <input
+                            id="cfg_fecha_saldo"
+                            type="date"
+                        >
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="panel span-2">
+
+                    <span class="eyebrow">
+                        DATOS
+                    </span>
+
+                    <h3>
+                        Copia de seguridad
+                    </h3>
+
+
+                    <p class="helper-text">
+
+                        Exporta o restaura
+                        todos los datos del ERP.
+
+                    </p>
+
+
+                    <div class="actions">
+
+                        <button
+                            class="btn"
+                            onclick="
+                            exportarRespaldo()
+                            "
+                        >
+                            Exportar respaldo JSON
+                        </button>
+
+
+                        <button
+                            class="btn"
+                            onclick="
+                            importarRespaldoInput()
+                            "
+                        >
+                            Importar respaldo
+                        </button>
+
+
+                        <input
+                            id="backupInput"
+                            type="file"
+                            accept=".json,application/json"
+                            hidden
+                        >
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+            <button
+                class="btn btn-primary"
+                onclick="
+                saveConfiguracion()
+                "
+            >
+                Guardar configuración
+            </button>
+
+        </section>
+
+
+    </main>
+
+
+</div>
+
+
+
+<!-- ==================================================
+     MODAL FICHA PRODUCTO
+=================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modalProductDetail"
+>
+
+    <div class="modal modal-xl">
+
+        <div class="modal-top">
+
+            <h2>
+                Ficha de producto
+            </h2>
+
+            <button
+                class="icon-close"
+                onclick="
+                closeModal(
+                    'modalProductDetail'
+                )
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div id="productDetailContent"></div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     MODAL NUEVA VENTA
+=================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modalVenta"
+>
+
+    <div class="modal">
+
+
+        <div class="modal-top">
+
+            <h2>
+                Nueva venta
+            </h2>
+
+            <button
+                class="icon-close"
+                onclick="
+                closeModal(
+                    'modalVenta'
+                )
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Fecha
+            </label>
+
+            <input
+                id="v_fecha"
+                type="date"
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Producto
+            </label>
+
+            <select id="v_producto"></select>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Talla
+            </label>
+
+            <select id="v_talla"></select>
+
+        </div>
+
+
+        <div class="field-row">
+
+
+            <div class="field">
+
+                <label>
+                    Cantidad
+                </label>
+
+                <input
+                    id="v_cantidad"
+                    type="number"
+                    min="1"
+                >
+
+            </div>
+
+
+            <div class="field">
+
+                <label>
+                    Precio unitario
+                </label>
+
+                <input
+                    id="v_precio"
+                    type="number"
+                >
+
+            </div>
+
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Descuento
+            </label>
+
+            <input
+                id="v_descuento"
+                type="number"
+                value="0"
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Medio de pago
+            </label>
+
+            <select id="v_medio_pago">
+
+                <option>
+                    Transferencia
+                </option>
+
+                <option>
+                    Efectivo
+                </option>
+
+                <option>
+                    Tarjeta
+                </option>
+
+                <option>
+                    Otro
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Observación
+            </label>
+
+            <input id="v_observacion">
+
+        </div>
+
+
+        <div class="modal-actions">
+
+            <button
+                class="btn"
+                onclick="
+                closeModal(
+                    'modalVenta'
+                )
+                "
+            >
+                Cancelar
+            </button>
+
+
+            <button
+                class="btn btn-primary"
+                onclick="
+                saveVenta()
+                "
+            >
+                Guardar venta
+            </button>
+
+        </div>
+
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     MODAL NUEVA COTIZACIÓN
+=================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modalCotizacion"
+>
+
+    <div class="modal modal-xl">
+
+
+        <div class="modal-top">
+
+            <h2>
+                Nueva cotización
+            </h2>
+
+            <button
+                class="icon-close"
+                onclick="
+                closeModal(
+                    'modalCotizacion'
+                )
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+
+        <div class="two-col">
+
+
+            <div>
+
+
+                <div class="field">
+
+                    <label>
+                        Fecha
+                    </label>
+
+                    <input
+                        id="cot_fecha"
+                        type="date"
+                    >
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>
+                        Referencia / nombre
+                    </label>
+
+                    <input
+                        id="cot_referencia"
+                        placeholder="Ej: Pedido uniformes marzo"
+                    >
+
+                </div>
+
+
+            </div>
+
+
+            <div>
+
+
+                <div class="field">
+
+                    <label>
+                        Descuento total
+                    </label>
+
+                    <input
+                        id="cot_descuento"
+                        type="number"
+                        min="0"
+                        value="0"
+                    >
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>
+                        Observación
+                    </label>
+
+                    <input id="cot_observacion">
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+
+        <div class="panel compact">
+
+            <span class="eyebrow">
+                AGREGAR PRODUCTO
+            </span>
+
+
+            <div class="field">
+
+                <label>
+                    Producto
+                </label>
+
+                <select id="cot_producto"></select>
+
+            </div>
+
+
+            <div class="field-row">
+
+
+                <div class="field">
+
+                    <label>
+                        Talla
+                    </label>
+
+                    <select id="cot_talla"></select>
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>
+                        Cantidad
+                    </label>
+
+                    <input
+                        id="cot_cantidad"
+                        type="number"
+                        min="1"
+                        value="1"
+                    >
+
+                </div>
+
+
+            </div>
+
+
+            <div class="field">
+
+                <label>
+                    Precio unitario
+                </label>
+
+                <input
+                    id="cot_precio"
+                    type="number"
+                    min="0"
+                >
+
+            </div>
+
+
+            <button
+                class="btn"
+                onclick="
+                agregarItemCotizacion()
+                "
+            >
+                + Agregar producto
+            </button>
+
+        </div>
+
+
+
+        <h3 class="section-title">
+            Detalle
+        </h3>
+
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Producto</th>
+                        <th>Talla</th>
+                        <th>Cantidad</th>
+                        <th>Unitario</th>
+                        <th>Total</th>
+                        <th></th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody id="cot_detalle"></tbody>
+
+            </table>
+
+        </div>
+
+
+
+        <div
+            class="two-col"
+            style="margin-top:15px;"
+        >
+
+            <div></div>
+
+            <div
+                class="panel compact"
+                id="cot_resumen"
+            ></div>
+
+        </div>
+
+
+
+        <div class="modal-actions">
+
+            <button
+                class="btn"
+                onclick="
+                closeModal(
+                    'modalCotizacion'
+                )
+                "
+            >
+                Cancelar
+            </button>
+
+
+            <button
+                class="btn btn-primary"
+                onclick="
+                saveCotizacion()
+                "
+            >
+                Guardar cotización
+            </button>
+
+        </div>
+
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     DETALLE COTIZACIÓN
+=================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modalCotizacionDetail"
+>
+
+    <div class="modal modal-xl">
+
+        <div class="modal-top">
+
+            <h2>
+                Detalle de cotización
+            </h2>
+
+
+            <button
+                class="icon-close"
+                onclick="
+                closeModal(
+                    'modalCotizacionDetail'
+                )
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div id="cotizacionDetailContent"></div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     STOCK MATERIAL
+=================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modalStock"
+>
+
+    <div class="modal">
+
+        <div class="modal-top">
+
+            <h2>
+                Actualizar material
+            </h2>
+
+            <button
+                class="icon-close"
+                onclick="
+                closeModal(
+                    'modalStock'
+                )
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Material
+            </label>
+
+            <select id="f_stock_material"></select>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Stock actual
+            </label>
+
+            <input
+                id="f_stock_cantidad"
+                type="number"
+                min="0"
+                step="0.0001"
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Stock mínimo
+            </label>
+
+            <input
+                id="f_stock_minimo"
+                type="number"
+                min="0"
+                step="0.0001"
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Stock objetivo
+            </label>
+
+            <input
+                id="f_stock_objetivo"
+                type="number"
+                min="0"
+                step="0.0001"
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Bodega
+            </label>
+
+            <select id="f_stock_bodega"></select>
+
+        </div>
+
+
+        <div class="modal-actions">
+
+            <button
+                class="btn"
+                onclick="
+                closeModal(
+                    'modalStock'
+                )
+                "
+            >
+                Cancelar
+            </button>
+
+
+            <button
+                class="btn btn-primary"
+                onclick="
+                saveStock()
+                "
+            >
+                Guardar
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     STOCK PRENDA
+=================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modalStockPrenda"
+>
+
+    <div class="modal">
+
+        <div class="modal-top">
+
+            <h2>
+                Stock de prenda
+            </h2>
+
+            <button
+                class="icon-close"
+                onclick="
+                closeModal(
+                    'modalStockPrenda'
+                )
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Producto
+            </label>
+
+            <select id="f_prenda_producto"></select>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Talla
+            </label>
+
+            <select id="f_prenda_talla"></select>
+
+        </div>
+
+
+        <div class="field-row">
+
+
+            <div class="field">
+
+                <label>
+                    Stock actual
+                </label>
+
+                <input
+                    id="f_prenda_stock"
+                    type="number"
+                    min="0"
+                >
+
+            </div>
+
+
+            <div class="field">
+
+                <label>
+                    Stock mínimo
+                </label>
+
+                <input
+                    id="f_prenda_minimo"
+                    type="number"
+                    min="0"
+                >
+
+            </div>
+
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Stock objetivo
+            </label>
+
+            <input
+                id="f_prenda_objetivo"
+                type="number"
+                min="0"
+            >
+
+        </div>
+
+
+        <div class="modal-actions">
+
+            <button
+                class="btn"
+                onclick="
+                closeModal(
+                    'modalStockPrenda'
+                )
+                "
+            >
+                Cancelar
+            </button>
+
+
+            <button
+                class="btn btn-primary"
+                onclick="
+                saveStockPrenda()
+                "
+            >
+                Guardar
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     NUEVO MATERIAL
+=================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modalMaterial"
+>
+
+    <div class="modal">
+
+        <div class="modal-top">
+
+            <h2>
+                Nuevo material
+            </h2>
+
+            <button
+                class="icon-close"
+                onclick="
+                closeModal(
+                    'modalMaterial'
+                )
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Tipo
+            </label>
+
+            <select id="f_mat_tipo">
+
+                <option>Tela</option>
+                <option>Hilo</option>
+                <option>Cierre</option>
+                <option>Botón</option>
+                <option>Elástico</option>
+                <option>Etiqueta</option>
+                <option>Otro</option>
+
+            </select>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Descripción
+            </label>
+
+            <input id="f_mat_detalle">
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Proveedor
+            </label>
+
+            <select id="f_mat_proveedor"></select>
+
+        </div>
+
+
+        <div class="field-row">
+
+
+            <div class="field">
+
+                <label>
+                    Unidad
+                </label>
+
+                <select id="f_mat_unidad">
+
+                    <option>kg</option>
+                    <option>metros</option>
+                    <option>unidades</option>
+                    <option>rollos</option>
+
+                </select>
+
+            </div>
+
+
+            <div class="field">
+
+                <label>
+                    Último precio
+                </label>
+
+                <input
+                    id="f_mat_precio"
+                    type="number"
+                >
+
+            </div>
+
+
+        </div>
+
+
+        <div class="modal-actions">
+
+            <button
+                class="btn"
+                onclick="
+                closeModal(
+                    'modalMaterial'
+                )
+                "
+            >
+                Cancelar
+            </button>
+
+
+            <button
+                class="btn btn-primary"
+                onclick="
+                saveMaterial()
+                "
+            >
+                Guardar
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     COMPRA
+=================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modalCompra"
+>
+
+    <div class="modal">
+
+        <div class="modal-top">
+
+            <h2>
+                Registrar compra
+            </h2>
+
+            <button
+                class="icon-close"
+                onclick="
+                closeModal(
+                    'modalCompra'
+                )
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Fecha
+            </label>
+
+            <input
+                id="c_fecha"
+                type="date"
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Proveedor
+            </label>
+
+            <select id="c_proveedor"></select>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Material
+            </label>
+
+            <select id="c_material"></select>
+
+        </div>
+
+
+        <div class="field-row">
+
+
+            <div class="field">
+
+                <label>
+                    Cantidad
+                </label>
+
+                <input
+                    id="c_cantidad"
+                    type="number"
+                    step="0.0001"
+                >
+
+            </div>
+
+
+            <div class="field">
+
+                <label>
+                    Precio unitario
+                </label>
+
+                <input
+                    id="c_precio"
+                    type="number"
+                >
+
+            </div>
+
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Documento / factura
+            </label>
+
+            <input id="c_documento">
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Estado de pago
+            </label>
+
+            <select id="c_estado">
+
+                <option>
+                    Pendiente
+                </option>
+
+                <option>
+                    Pagada
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Vencimiento
+            </label>
+
+            <input
+                id="c_vencimiento"
+                type="date"
+            >
+
+        </div>
+
+
+        <div class="modal-actions">
+
+            <button
+                class="btn"
+                onclick="
+                closeModal(
+                    'modalCompra'
+                )
+                "
+            >
+                Cancelar
+            </button>
+
+
+            <button
+                class="btn btn-primary"
+                onclick="
+                saveCompra()
+                "
+            >
+                Guardar compra
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     GASTO
+=================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modalGasto"
+>
+
+    <div class="modal">
+
+        <div class="modal-top">
+
+            <h2>
+                Registrar gasto
+            </h2>
+
+            <button
+                class="icon-close"
+                onclick="
+                closeModal(
+                    'modalGasto'
+                )
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Fecha
+            </label>
+
+            <input
+                id="g_fecha"
+                type="date"
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Categoría
+            </label>
+
+            <select id="g_categoria">
+
+                <option>Mano de obra</option>
+                <option>Transporte</option>
+                <option>Servicios</option>
+                <option>Mantención</option>
+                <option>Operacional</option>
+                <option>Publicidad</option>
+                <option>Otro</option>
+
+            </select>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Concepto
+            </label>
+
+            <input id="g_concepto">
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Monto
+            </label>
+
+            <input
+                id="g_monto"
+                type="number"
+            >
+
+        </div>
+
+
+        <div class="modal-actions">
+
+            <button
+                class="btn"
+                onclick="
+                closeModal(
+                    'modalGasto'
+                )
+                "
+            >
+                Cancelar
+            </button>
+
+
+            <button
+                class="btn btn-primary"
+                onclick="
+                saveGasto()
+                "
+            >
+                Guardar
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     ORDEN PRODUCCIÓN
+=================================================== -->
+
+<div
+    class="modal-overlay"
+    id="modalOrden"
+>
+
+    <div class="modal">
+
+        <div class="modal-top">
+
+            <h2>
+                Nueva orden de producción
+            </h2>
+
+            <button
+                class="icon-close"
+                onclick="
+                closeModal(
+                    'modalOrden'
+                )
+                "
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Fecha
+            </label>
+
+            <input
+                id="op_fecha"
+                type="date"
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Producto
+            </label>
+
+            <select id="op_producto"></select>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Talla
+            </label>
+
+            <select id="op_talla"></select>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Cantidad
+            </label>
+
+            <input
+                id="op_cantidad"
+                type="number"
+                min="1"
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                Observación
+            </label>
+
+            <input id="op_observacion">
+
+        </div>
+
+
+        <div class="modal-actions">
+
+            <button
+                class="btn"
+                onclick="
+                closeModal(
+                    'modalOrden'
+                )
+                "
+            >
+                Cancelar
+            </button>
+
+
+            <button
+                class="btn btn-primary"
+                onclick="
+                saveOrden()
+                "
+            >
+                Crear orden
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     JAVASCRIPT
+=================================================== -->
+
+<script src="js/storage.js"></script>
+
+<script src="js/data.js"></script>
+
+<script src="js/ui.js"></script>
+
+<script src="js/catalogo.js"></script>
+
+<script src="js/configuracion.js"></script>
+
+<script src="js/inventario.js"></script>
+
+<script src="js/ventas.js"></script>
+
+<script src="js/cotizaciones.js"></script>
+
+<script src="js/produccion.js"></script>
+
+<script src="js/compras.js"></script>
+
+<script src="js/finanzas.js"></script>
+
+<script src="js/notificaciones.js"></script>
+
+<script src="js/reportes.js"></script>
+
+<script src="js/app.js"></script>
+
+
+</body>
+
+</html>

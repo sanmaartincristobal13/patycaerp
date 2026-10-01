@@ -1,0 +1,174 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+
+    min-height: 100vh;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    background-image:
+        linear-gradient(
+            rgba(15, 35, 58, 0.68),
+            rgba(15, 35, 58, 0.68)
+        ),
+        url("../assets/img/patyca-fondo.png");
+
+    background-size:
+        cover;
+
+    background-position:
+        center;
+
+    background-repeat:
+        no-repeat;
+
+    background-attachment:
+        fixed;
+}
+
+.login-page {
+    min-height: 100vh;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 390px;
+
+    padding: 34px;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.95
+        );
+
+    border-radius: 14px;
+
+    box-shadow:
+        0 20px 60px
+        rgba(
+            0,
+            0,
+            0,
+            0.25
+        );
+
+    backdrop-filter:
+        blur(3px);
+}
+
+.login-brand {
+    color:
+        #17304D;
+
+    font-size: 34px;
+    font-weight: 800;
+
+    letter-spacing: 2px;
+
+    text-align: center;
+}
+
+.login-sub {
+    margin:
+        5px 0 25px;
+
+    color:
+        #6A7280;
+
+    text-align: center;
+}
+
+label {
+    display: block;
+
+    margin:
+        14px 0 6px;
+
+    color:
+        #4D5765;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+input {
+    width: 100%;
+
+    padding: 12px;
+
+    border:
+        1px solid
+        #D5DAE0;
+
+    border-radius: 7px;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.95
+        );
+
+    outline: none;
+}
+
+input:focus {
+    border-color:
+        #BC8535;
+}
+
+button {
+    width: 100%;
+
+    margin-top: 22px;
+
+    padding: 12px;
+
+    border: none;
+
+    border-radius: 7px;
+
+    background:
+        #17304D;
+
+    color:
+        white;
+
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+button:hover {
+    background:
+        #24496F;
+}
+
+.login-msg {
+    min-height: 18px;
+
+    margin-top: 15px;
+
+    color:
+        #A94A3A;
+
+    font-size: 12px;
+
+    text-align: center;
+}

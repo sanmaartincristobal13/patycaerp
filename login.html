@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>PATYCA - Iniciar sesión</title>
+
+    <link
+        rel="stylesheet"
+        href="css/login.css"
+    >
+</head>
+
+<body>
+
+<div class="login-page">
+
+    <div class="login-card">
+
+        <div class="login-brand">
+            PATYCA
+        </div>
+
+        <p class="login-sub">
+            Sistema de gestión
+        </p>
+
+        <form id="loginForm">
+
+            <label>
+                Correo
+            </label>
+
+            <input
+                id="email"
+                type="email"
+                required
+                placeholder="correo@patyca.cl"
+            >
+
+            <label>
+                Contraseña
+            </label>
+
+            <input
+                id="password"
+                type="password"
+                required
+                placeholder="Contraseña"
+            >
+
+            <button type="submit">
+                Ingresar
+            </button>
+
+        </form>
+
+        <p
+            class="login-msg"
+            id="loginMsg"
+        ></p>
+
+    </div>
+
+</div>
+
+<script src="js/login.js"></script>
+
+</body>
+</html>
