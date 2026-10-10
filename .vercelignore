@@ -1,0 +1,9 @@
+# Archivos que NO se suben a Vercel
+.env
+**/.env
+backend/node_modules
+node_modules
+public
+.vercel
+*.log
+Iniciar PATYCA.bat

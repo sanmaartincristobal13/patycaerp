@@ -1,530 +1,79 @@
 // ======================================================
-// PATYCA ERP V5 - CONFIGURACIÓN
+// CONFIGURACIÓN - empresa y usuarios
 // ======================================================
 
-
-// ======================================================
-// CARGAR CONFIGURACIÓN
-// ======================================================
-
-function cargarConfiguracion() {
-
-    const configuracion =
-        db.configuracion;
-
-
-    setValue(
-
-        "cfg_empresa",
-
-        configuracion.empresa
-
-    );
-
-
-    setValue(
-
-        "cfg_taller",
-
-        configuracion.taller
-
-    );
-
-
-    setValue(
-
-        "cfg_bodega1",
-
-        configuracion.bodegas[0]
-        ||
-        "Bodega 1"
-
-    );
-
-
-    setValue(
-
-        "cfg_bodega2",
-
-        configuracion.bodegas[1]
-        ||
-        "Bodega 2"
-
-    );
-
-
-    setValue(
-
-        "cfg_bodega3",
-
-        configuracion.bodegas[2]
-        ||
-        "Bodega 3"
-
-    );
-
-
-    setValue(
-
-        "cfg_stock_advertencia",
-
-        configuracion
-            .porcentajeAdvertenciaStock
-
-    );
-
-
-    setValue(
-
-        "cfg_dias_vencimiento",
-
-        configuracion
-            .diasAvisoVencimiento
-
-    );
-
-
-    setValue(
-
-        "cfg_saldo_inicial",
-
-        configuracion
-            .saldoInicial
-
-    );
-
-
-    setValue(
-
-        "cfg_fecha_saldo",
-
-        configuracion
-            .fechaSaldoInicial
-
-    );
-
-}
-
-
-// ======================================================
-// COLOCAR VALOR
-// ======================================================
-
-function setValue(
-    id,
-    valor
-) {
-
-    const elemento =
-        document.getElementById(
-            id
-        );
-
-
-    if (
-        elemento
-    ) {
-
-        elemento.value =
-            valor
-            ??
-            "";
-
-    }
-
-}
-
-
-// ======================================================
-// GUARDAR CONFIGURACIÓN
-// ======================================================
-
-function saveConfiguracion() {
-
-    db.configuracion.empresa =
-
-        document
-            .getElementById(
-                "cfg_empresa"
-            )
-            .value
-            .trim();
-
-
-    db.configuracion.taller =
-
-        document
-            .getElementById(
-                "cfg_taller"
-            )
-            .value
-            .trim();
-
-
-    db.configuracion.bodegas = [
-
-        document
-            .getElementById(
-                "cfg_bodega1"
-            )
-            .value
-            .trim()
-
-        ||
-
-        "Bodega 1",
-
-
-        document
-            .getElementById(
-                "cfg_bodega2"
-            )
-            .value
-            .trim()
-
-        ||
-
-        "Bodega 2",
-
-
-        document
-            .getElementById(
-                "cfg_bodega3"
-            )
-            .value
-            .trim()
-
-        ||
-
-        "Bodega 3"
-
-    ];
-
-
-    db.configuracion
-        .porcentajeAdvertenciaStock =
-
-        Number(
-
-            document
-                .getElementById(
-                    "cfg_stock_advertencia"
-                )
-                .value
-
-            ||
-
-            20
-
-        );
-
-
-    db.configuracion
-        .diasAvisoVencimiento =
-
-        Number(
-
-            document
-                .getElementById(
-                    "cfg_dias_vencimiento"
-                )
-                .value
-
-            ||
-
-            5
-
-        );
-
-
-    db.configuracion
-        .saldoInicial =
-
-        Number(
-
-            document
-                .getElementById(
-                    "cfg_saldo_inicial"
-                )
-                .value
-
-            ||
-
-            0
-
-        );
-
-
-    db.configuracion
-        .fechaSaldoInicial =
-
-        document
-            .getElementById(
-                "cfg_fecha_saldo"
-            )
-            .value;
-
-
-    registrarActividad(
-
-        "Configuración",
-
-        "Configuración general actualizada"
-
-    );
-
-
-    persist();
-
-
-    renderAll();
-
-
-    alert(
-        "Configuración guardada correctamente."
-    );
-
-}
-
-
-// ======================================================
-// SELECT BODEGAS
-// ======================================================
-
-function cargarSelectBodegas(
-    selectId
-) {
-
-    const select =
-        document.getElementById(
-            selectId
-        );
-
-
-    if (
-        !select
-    ) {
-
-        return;
-
-    }
-
-
-    select.innerHTML =
-
-        db.configuracion.bodegas
-            .map(
-
-                bodega => `
-
-                    <option
-                        value="${bodega}"
-                    >
-
-                        ${bodega}
-
-                    </option>
-
-                `
-
-            )
-            .join("");
-
-}
-
-
-// ======================================================
-// EXPORTAR RESPALDO
-// ======================================================
-
-function exportarRespaldo() {
-
-    const contenido =
-        JSON.stringify(
-
-            db,
-
-            null,
-
-            2
-
-        );
-
-
-    const blob =
-        new Blob(
-
-            [
-                contenido
-            ],
-
-            {
-                type:
-                    "application/json;charset=utf-8;"
+vistas.configuracion = {
+
+    iniciar() {
+        document.getElementById('btnNuevoUsuario').addEventListener('click', () => this.formularioUsuario());
+    },
+
+    async cargar() {
+        const [config, usuarios] = await Promise.all([api.get('/configuracion'), api.get('/usuarios')]);
+
+        const form = document.getElementById('formConfig');
+        form.innerHTML = `
+            <div class="form-grid">
+                ${campo('Nombre de la empresa', `<input name="empresa" required value="${esc(config.empresa)}">`, 'full')}
+                ${campo('Nombre del taller', `<input name="taller" required value="${esc(config.taller)}">`, 'full')}
+                ${campo('Días de anticipación para alertas (entregas de producción y pagos)', `<input type="number" name="dias_aviso_vencimiento" min="0" value="${config.dias_aviso_vencimiento}">`, 'full')}
+                ${campo('Saldo inicial de caja', `<input type="number" name="saldo_inicial" value="${config.saldo_inicial}">`)}
+                ${campo('Fecha del saldo inicial', `<input type="date" name="fecha_saldo_inicial" value="${esc(config.fecha_saldo_inicial || '')}">`)}
+            </div>
+            <p class="error-form"></p>
+            <div class="modal-actions"><button type="submit" class="btn btn-primary">Guardar</button></div>`;
+
+        // Se reemplaza el form para no acumular listeners entre recargas.
+        const limpio = form.cloneNode(true);
+        form.replaceWith(limpio);
+        alEnviar(limpio, async datos => {
+            await api.put('/configuracion', {
+                ...config,
+                ...datos,
+                dias_aviso_vencimiento: num(datos.dias_aviso_vencimiento),
+                saldo_inicial: num(datos.saldo_inicial) ?? 0,
+                fecha_saldo_inicial: datos.fecha_saldo_inicial || null,
+            });
+            aviso('Configuración guardada.');
+        });
+
+        document.getElementById('configUsuarios').innerHTML = tabla([
+            { titulo: 'Nombre', valor: u => `<strong>${esc(u.nombre)}</strong><span class="sub">${esc(u.email)}</span>` },
+            { titulo: 'Rol', valor: u => esc(u.rol) },
+            { titulo: 'Estado', valor: u => u.activo ? '<span class="pill pill-green">Activo</span>' : '<span class="pill pill-gray">Inactivo</span>' },
+            { titulo: '', clase: 'acciones', valor: u => `<button class="btn btn-small" data-editar="${u.id}">Editar</button>` },
+        ], usuarios);
+
+        document.querySelectorAll('#configUsuarios [data-editar]').forEach(b => b.addEventListener('click', () =>
+            this.formularioUsuario(usuarios.find(u => u.id === num(b.dataset.editar)))));
+    },
+
+    async formularioUsuario(u = null) {
+        const { roles } = await compartido.obtener('catalogos');
+        const caja = modal.abrir(u ? `Editar ${u.nombre}` : 'Nuevo usuario', `
+            <form>
+                <div class="form-grid">
+                    ${campo('Nombre', `<input name="nombre" required value="${esc(u?.nombre)}">`, 'full')}
+                    ${campo('Correo', `<input type="email" name="email" required value="${esc(u?.email)}" ${u ? 'disabled' : ''}>`, 'full')}
+                    ${campo('Rol', `<select name="rol_id">${opciones(roles, { seleccionado: u?.rol_id })}</select>`)}
+                    ${campo(u ? 'Nueva clave (dejar vacío para no cambiar)' : 'Clave', `<input type="password" name="password" minlength="8" ${u ? '' : 'required'}>`)}
+                    ${u ? campo('Estado', `<select name="activo"><option value="1" ${u.activo ? 'selected' : ''}>Activo</option><option value="0" ${u.activo ? '' : 'selected'}>Inactivo</option></select>`) : ''}
+                </div>
+                ${PIE_FORM()}
+            </form>`);
+
+        alEnviar(caja.querySelector('form'), async datos => {
+            if (u) {
+                await api.put(`/usuarios/${u.id}`, {
+                    nombre: datos.nombre, rol_id: num(datos.rol_id),
+                    activo: datos.activo === '1', password: datos.password || null,
+                });
+            } else {
+                await api.post('/usuarios', { ...datos, rol_id: num(datos.rol_id) });
             }
-
-        );
-
-
-    const url =
-        URL.createObjectURL(
-            blob
-        );
-
-
-    const enlace =
-        document.createElement(
-            "a"
-        );
-
-
-    enlace.href =
-        url;
-
-
-    enlace.download =
-
-        "PATYCA_respaldo_"
-
-        +
-
-        todayStr()
-
-        +
-
-        ".json";
-
-
-    enlace.click();
-
-
-    URL.revokeObjectURL(
-        url
-    );
-
-}
-
-
-// ======================================================
-// SELECCIONAR RESPALDO
-// ======================================================
-
-function importarRespaldoInput() {
-
-    document
-        .getElementById(
-            "backupInput"
-        )
-        .click();
-
-}
-
-
-// ======================================================
-// IMPORTAR RESPALDO
-// ======================================================
-
-document
-    .getElementById(
-        "backupInput"
-    )
-    ?.addEventListener(
-
-        "change",
-
-        async event => {
-
-            const archivo =
-                event
-                    .target
-                    .files[0];
-
-
-            if (
-                !archivo
-            ) {
-
-                return;
-
-            }
-
-
-            try {
-
-                const texto =
-                    await archivo.text();
-
-
-                const importado =
-                    JSON.parse(
-                        texto
-                    );
-
-
-                const confirmar =
-                    confirm(
-
-                        "¿Restaurar este respaldo?\n\n"
-                        +
-                        "Los datos actuales serán reemplazados."
-
-                    );
-
-
-                if (
-                    !confirmar
-                ) {
-
-                    event.target.value =
-                        "";
-
-                    return;
-
-                }
-
-
-                db =
-                    normalizarDb(
-                        importado
-                    );
-
-
-                persist();
-
-
-                renderAll();
-
-
-                alert(
-                    "Respaldo restaurado correctamente."
-                );
-
-            }
-
-
-            catch (
-                error
-            ) {
-
-                console.error(
-                    error
-                );
-
-
-                alert(
-                    "No se pudo importar el respaldo."
-                );
-
-            }
-
-
-            finally {
-
-                event.target.value =
-                    "";
-
-            }
-
-        }
-
-    );
+            modal.cerrar();
+            aviso('Usuario guardado.');
+            await this.cargar();
+        });
+    },
+};

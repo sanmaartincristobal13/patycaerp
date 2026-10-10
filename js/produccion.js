@@ -1,3535 +1,405 @@
 // ======================================================
-// PATYCA ERP V6
-// PRODUCCIÓN + CONVERSIÓN AUTOMÁTICA DE UNIDADES
+// PRODUCCIÓN - calendario de entregas, órdenes y fichas
+// ======================================================
+// Pendiente → En proceso → Terminada.
+// Cada orden tiene fecha de entrega; las que vencen dentro del
+// margen de aviso (Configuración) o están atrasadas se destacan.
+// Al terminar: las prendas entran al stock y, si el producto
+// tiene ficha de materiales, se descuenta la tela/insumos usados.
 // ======================================================
 
-let ultimoCalculoProduccion = null;
-
-
-// ======================================================
-// OBTENER CANTIDAD DE COMPONENTE EN INVENTARIO
-// ======================================================
-
-function cantidadInventarioProduccion(
-    componente,
-    material
-) {
-
-    if (
-        componente?.cantidadInventario !==
-        undefined
-        &&
-        componente?.cantidadInventario !==
-        null
-    ) {
-
-        return Number(
-            componente.cantidadInventario
-        );
-
-    }
-
-
-    return Number(
-        componente?.cantidad
-        ||
-        0
-    );
-
-}
-
-
-// ======================================================
-// CONSUMO CANÓNICO EN KG
-// SOLO PARA MATERIALES DE PESO
-// ======================================================
-
-function consumoMaterialKg(
-    componente,
-    material
-) {
-
-    const familia =
-        familiaUnidadMaterial(
-            material
-        );
-
-
-    if (
-        familia !== "peso"
-    ) {
-
-        return null;
-
-    }
-
-
-    if (
-        componente?.cantidadBase !==
-        undefined
-        &&
-        componente?.cantidadBase !==
-        null
-        &&
-        componente?.unidadBase ===
-        "kg"
-    ) {
-
-        return Number(
-            componente.cantidadBase
-        );
-
-    }
-
-
-    /*
-        Compatibilidad con ficha antigua.
-    */
-
-    const unidad =
-        normalizarUnidadMedida(
-            componente?.unidad
-            ||
-            material?.unidad
-        );
-
-
-    const cantidad =
-        Number(
-            componente?.cantidad
-            ||
-            0
-        );
-
-
-    if (
-        unidad === "kg"
-    ) {
-
-        return cantidad;
-
-    }
-
-
-    if (
-        unidad === "g"
-    ) {
-
-        return cantidad / 1000;
-
-    }
-
-
-    return null;
-
-}
-
-
-// ======================================================
-// CONSUMO EN GRAMOS
-// ======================================================
-
-function consumoMaterialEnGramos(
-    componente,
-    material
-) {
-
-    const kg =
-        consumoMaterialKg(
-            componente,
-            material
-        );
-
-
-    if (
-        kg === null
-    ) {
-
-        return null;
-
-    }
-
-
-    return kg * 1000;
-
-}
-
-
-// ======================================================
-// IDENTIFICAR TELA
-// ======================================================
-
-function materialPareceTela(material) {
-
-    const texto =
-        (
-            String(
-                material?.tipo
-                ||
-                ""
-            )
-            +
-            " "
-            +
-            String(
-                material?.detalle
-                ||
-                ""
-            )
-        )
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(
-            /[\u0300-\u036f]/g,
-            ""
-        );
-
-
-    return (
-
-        texto.includes("tela")
-        ||
-        texto.includes("franela")
-        ||
-        texto.includes("pique")
-        ||
-        texto.includes("polar")
-        ||
-        texto.includes("bistretch")
-        ||
-        texto.includes("crepe")
-        ||
-        texto.includes("tull")
-
-    );
-
-}
-
-
-// ======================================================
-// CAMPOS AUTOMÁTICOS RENDIMIENTO
-// ======================================================
-
-function asegurarCamposFichaProduccion() {
-
-    const pesoInput =
-        document.getElementById(
-            "prod_peso"
-        );
-
-
-    if (
-        !pesoInput
-        ||
-        document.getElementById(
-            "prodFichaInfo"
-        )
-    ) {
-
-        return;
-
-    }
-
-
-    const fieldPeso =
-        pesoInput.closest(
-            ".field"
-        );
-
-
-    if (
-        !fieldPeso
-    ) {
-
-        return;
-
-    }
-
-
-    const panel =
-        document.createElement(
-            "div"
-        );
-
-
-    panel.id =
-        "prodFichaInfo";
-
-
-    panel.className =
-        "panel compact";
-
-
-    panel.style.marginBottom =
-        "16px";
-
-
-    panel.innerHTML = `
-
-        <div class="panel-title-row">
-
-            <div>
-
-                <span class="eyebrow">
-                    FICHA TÉCNICA
-                </span>
-
-                <h3>
-                    Datos automáticos de la talla
-                </h3>
-
+vistas.produccion = {
+
+    pestana: 'calendario',
+    mes: null,          // primer día del mes visible en el calendario
+    ordenes: [],
+
+    iniciar() {
+        document.querySelectorAll('#view-produccion .tab').forEach(t => t.addEventListener('click', () => {
+            document.querySelectorAll('#view-produccion .tab').forEach(x => x.classList.toggle('active', x === t));
+            this.pestana = t.dataset.tab;
+            this.cargar();
+        }));
+        document.getElementById('btnNuevaOrden').addEventListener('click', () => this.formularioOrden());
+        document.getElementById('btnNuevaFicha').addEventListener('click', () => this.formularioFicha());
+        document.getElementById('btnNuevaFicha').hidden = !puede('fichas');
+        const [a, m] = hoy().split('-');
+        this.mes = new Date(Number(a), Number(m) - 1, 1);
+    },
+
+    async cargar() {
+        const contenedor = document.getElementById('produccionTabla');
+        const alertas = document.getElementById('produccionAlertas');
+        alertas.innerHTML = '';
+
+        if (this.pestana === 'tela') {
+            await this.dibujarTela(contenedor);
+            return;
+        }
+
+        if (this.pestana === 'fichas') {
+            const fichas = await api.get('/produccion/fichas');
+            contenedor.innerHTML = `<div class="table-wrap">${tabla([
+                { titulo: 'Producto', valor: f => esc(f.producto) },
+                { titulo: 'Talla', valor: f => esc(f.talla) },
+                { titulo: 'Materiales por prenda', valor: f => f.materiales.map(m => `${fmtNumero(m.cantidad)} ${esc(m.unidad)} de ${esc(m.material)}`).join('<br>') || '<span class="muted">Sin materiales</span>' },
+                { titulo: 'Costo materiales', clase: 'num', valor: f => fmtCLP(f.materiales.reduce((s, m) => s + m.costo, 0)) },
+                { titulo: '', clase: 'acciones', valor: f => puede('fichas') ? `<button class="btn btn-small" data-ficha="${f.producto_id}|${esc(f.talla)}">Editar</button>` : '' },
+            ], fichas, 'Aún no hay fichas. Son opcionales: sirven para descontar materiales al terminar una orden y calcular la reposición.')}</div>`;
+
+            contenedor.querySelectorAll('[data-ficha]').forEach(b => b.addEventListener('click', () => {
+                const [productoId, talla] = b.dataset.ficha.split('|');
+                this.formularioFicha(fichas.find(f => f.producto_id === num(productoId) && f.talla === talla));
+            }));
+            return;
+        }
+
+        this.ordenes = await api.get('/produccion/ordenes');
+        if (this.pestana !== 'terminadas') this.dibujarAlertas(alertas);
+        if (this.pestana === 'calendario') this.dibujarCalendario(contenedor);
+        else this.dibujarLista(contenedor);
+    },
+
+    // ---------- Costo y rendimiento de tela ----------
+    // Mismo cálculo que la planilla "Pesos_uniformes_rendimiento_tela":
+    // consumo = peso × (1 + merma); costo = consumo × precio por kg.
+
+    async dibujarTela(contenedor) {
+        const [{ tiposTela }, establecimientos] = await Promise.all([
+            api.get('/catalogos'),   // sin caché: los parámetros pueden haber cambiado
+            compartido.obtener('establecimientos'),
+        ]);
+        this.colegioTela ??= '';
+        const filas = await api.get('/produccion/rendimiento-tela' + (this.colegioTela ? `?establecimiento_id=${this.colegioTela}` : ''));
+        const editable = puede('fichas');
+
+        const parametros = tiposTela.map(t => `
+            <div class="card">
+                <div class="lbl"><strong>${esc(t.nombre)}</strong></div>
+                <div class="num">${fmtCLP(t.precio_kg)}<small> /kg</small></div>
+                <div class="lbl">Rollo ${fmtNumero(t.peso_rollo_kg)} kg · merma ${fmtNumero(t.merma * 100)}%</div>
+                ${t.observacion ? `<span class="sub">${esc(t.observacion)}</span>` : ''}
+                ${editable ? `<button class="btn btn-small" data-tela="${t.id}" style="margin-top:8px">Editar</button>` : ''}
+            </div>`).join('');
+
+        // Una tabla por producto.
+        const porProducto = new Map();
+        filas.forEach(f => {
+            const clave = `${f.establecimiento} · ${f.producto}`;
+            if (!porProducto.has(clave)) porProducto.set(clave, []);
+            porProducto.get(clave).push(f);
+        });
+        const estimados = filas.filter(f => f.peso_estimado).length;
+
+        contenedor.innerHTML = `
+            <div class="cards">${parametros}</div>
+            <div class="filtros">
+                <select data-colegio>${opciones(establecimientos, { seleccionado: this.colegioTela, vacio: 'Todos los colegios' })}</select>
+                <span class="muted">${filas.length} tallas con peso · ${estimados} estimadas
+                    <span class="pill pill-yellow">Estimado</span> = reemplazar por pesaje real</span>
             </div>
-
-            <span
-                id="prodFichaEstado"
-                class="pill pill-gray"
-            >
-                Sin seleccionar
-            </span>
-
-        </div>
-
-
-        <div
-            id="prodFichaDatos"
-            class="results-grid"
-        ></div>
-
-    `;
-
-
-    fieldPeso.insertAdjacentElement(
-        "beforebegin",
-        panel
-    );
-
-
-    const materialField =
-        document.createElement(
-            "div"
-        );
-
-
-    materialField.className =
-        "field";
-
-
-    materialField.innerHTML = `
-
-        <label>
-            Material analizado
-        </label>
-
-        <select
-            id="prod_material_ficha"
-            onchange="
-            actualizarConsumoMaterialProduccion()
-            "
-        >
-
-            <option value="">
-                Selecciona producto y talla
-            </option>
-
-        </select>
-
-        <small class="helper-text">
-
-            El consumo se recupera automáticamente
-            desde la ficha técnica.
-
-        </small>
-
-    `;
-
-
-    fieldPeso.insertAdjacentElement(
-        "beforebegin",
-        materialField
-    );
-
-
-    pesoInput.readOnly =
-        true;
-
-
-    const labelPeso =
-        fieldPeso.querySelector(
-            "label"
-        );
-
-
-    if (
-        labelPeso
-    ) {
-
-        labelPeso.textContent =
-            "Consumo automático (g/prenda)";
-
-    }
-
-
-    const fieldPrecio =
-        document
-            .getElementById(
-                "prod_precio"
-            )
-            ?.closest(
-                ".field"
-            );
-
-
-    const labelPrecio =
-        fieldPrecio?.querySelector(
-            "label"
-        );
-
-
-    if (
-        labelPrecio
-    ) {
-
-        labelPrecio.textContent =
-            "Precio del material ($/kg)";
-
-    }
-
-}
-
-
-// ======================================================
-// CARGAR ESTABLECIMIENTOS
-// ======================================================
-
-function cargarSelectProduccion() {
-
-    asegurarCamposFichaProduccion();
-
-
-    const select =
-        document.getElementById(
-            "prod_establecimiento"
-        );
-
-
-    if (
-        !select
-    ) {
-
-        return;
-
-    }
-
-
-    select.innerHTML =
-        db.establecimientos
-            .map(
-
-                establecimiento => `
-
-                    <option
-                        value="${establecimiento.nombre}"
-                    >
-                        ${establecimiento.nombre}
-                    </option>
-
-                `
-
-            )
-            .join("");
-
-
-    cargarPrendasProduccion();
-
-}
-
-
-// ======================================================
-// CARGAR PRODUCTOS
-// ======================================================
-
-function cargarPrendasProduccion() {
-
-    const establecimiento =
-        document
-            .getElementById(
-                "prod_establecimiento"
-            )
-            ?.value;
-
-
-    const select =
-        document.getElementById(
-            "prod_prenda"
-        );
-
-
-    if (
-        !select
-    ) {
-
-        return;
-
-    }
-
-
-    const productos =
-        db.productos.filter(
-
-            producto =>
-                producto.establecimiento ===
-                establecimiento
-
-        );
-
-
-    select.innerHTML =
-        productos
-            .map(
-
-                producto => `
-
-                    <option
-                        value="${producto.id}"
-                    >
-                        ${producto.nombre}
-                    </option>
-
-                `
-
-            )
-            .join("");
-
-
-    cargarTallasProduccion();
-
-}
-
-
-// ======================================================
-// TALLAS
-// ======================================================
-
-function cargarTallasProduccion() {
-
-    const producto =
-        db.productos.find(
-
-            item =>
-                item.id ===
-                document
-                    .getElementById(
-                        "prod_prenda"
-                    )
-                    ?.value
-
-        );
-
-
-    const select =
-        document.getElementById(
-            "prod_talla"
-        );
-
-
-    if (
-        !select
-    ) {
-
-        return;
-
-    }
-
-
-    if (
-        !producto
-    ) {
-
-        select.innerHTML =
-            "";
-
-        return;
-
-    }
-
-
-    select.innerHTML =
-        obtenerTallasProducto(
-            producto
-        )
-        .map(
-
-            talla => `
-
-                <option value="${talla}">
-                    ${talla}
-                </option>
-
-            `
-
-        )
-        .join("");
-
-
-    actualizarDatosFichaProduccion();
-
-}
-
-
-// ======================================================
-// FICHA SELECCIONADA
-// ======================================================
-
-function obtenerFichaProduccionSeleccionada() {
-
-    return buscarFichaTecnica(
-
-        document
-            .getElementById(
-                "prod_prenda"
-            )
-            ?.value,
-
-        document
-            .getElementById(
-                "prod_talla"
-            )
-            ?.value
-
-    );
-
-}
-
-
-// ======================================================
-// MATERIALES DE PESO
-// ======================================================
-
-function obtenerMaterialesPesoFicha(ficha) {
-
-    if (
-        !ficha
-    ) {
-
-        return [];
-
-    }
-
-
-    return (
-        ficha.materiales
-        ||
-        []
-    )
-    .map(
-
-        componenteOriginal => {
-
-            const componente =
-                normalizarComponenteExistente(
-                    componenteOriginal
-                );
-
-
-            const material =
-                db.materiales.find(
-
-                    item =>
-                        item.codigo ===
-                        componente.materialCodigo
-
-                );
-
-
-            return {
-
-                componente:
-                    componente,
-
-                material:
-                    material,
-
-                gramos:
-                    consumoMaterialEnGramos(
-                        componente,
-                        material
-                    )
-
-            };
-
-        }
-
-    )
-    .filter(
-
-        item =>
-            item.material
-            &&
-            item.gramos !==
-            null
-
-    )
-    .sort(
-
-        (
-            a,
-            b
-        ) =>
-
-            Number(
-                !materialPareceTela(
-                    a.material
-                )
-            )
-
-            -
-
-            Number(
-                !materialPareceTela(
-                    b.material
-                )
-            )
-
-    );
-
-}
-
-
-// ======================================================
-// ACTUALIZAR FICHA
-// ======================================================
-
-function actualizarDatosFichaProduccion() {
-
-    asegurarCamposFichaProduccion();
-
-
-    ultimoCalculoProduccion =
-        null;
-
-
-    const productoId =
-        document
-            .getElementById(
-                "prod_prenda"
-            )
-            ?.value;
-
-
-    const talla =
-        document
-            .getElementById(
-                "prod_talla"
-            )
-            ?.value;
-
-
-    const producto =
-        db.productos.find(
-
-            item =>
-                item.id ===
-                productoId
-
-        );
-
-
-    const ficha =
-        obtenerFichaProduccionSeleccionada();
-
-
-    const estado =
-        document.getElementById(
-            "prodFichaEstado"
-        );
-
-
-    const datos =
-        document.getElementById(
-            "prodFichaDatos"
-        );
-
-
-    const selectMaterial =
-        document.getElementById(
-            "prod_material_ficha"
-        );
-
-
-    const peso =
-        document.getElementById(
-            "prod_peso"
-        );
-
-
-    if (
-        !producto
-        ||
-        !ficha
-    ) {
-
-        if (
-            estado
-        ) {
-
-            estado.className =
-                "pill pill-red";
-
-
-            estado.textContent =
-                "Ficha faltante";
-
-        }
-
-
-        if (
-            datos
-        ) {
-
-            datos.innerHTML = `
-
-                <div class="result-card">
-
-                    <span>
-                        Producto
-                    </span>
-
-                    <strong>
-                        ${producto?.nombre || "—"}
-                    </strong>
-
+            ${porProducto.size ? [...porProducto].map(([nombre, tallas]) => `
+                <div class="panel" style="margin-bottom:14px">
+                    <div class="panel-title-row"><h3>${esc(nombre)}</h3><span class="muted">Tela: ${esc(tallas[0].tipo_tela)}</span></div>
+                    ${tabla([
+                        { titulo: 'Talla', valor: f => `<strong>${esc(f.talla)}</strong>` },
+                        { titulo: 'Peso prenda', clase: 'num', valor: f => `${fmtNumero(f.peso_unitario_g)} g ${f.peso_estimado ? '<span class="pill pill-yellow">Estimado</span>' : '<span class="pill pill-green">Real</span>'}` },
+                        { titulo: 'Consumo c/ merma', clase: 'num', valor: f => `${fmtNumero(f.consumo_g)} g` },
+                        { titulo: 'Prendas por kg', clase: 'num', valor: f => fmtNumero(f.prendas_por_kg) },
+                        { titulo: 'Prendas por rollo', clase: 'num', valor: f => `${f.prendas_por_rollo}<span class="sub">sobran ${fmtNumero(f.sobrante_rollo_kg)} kg</span>` },
+                        { titulo: 'Costo tela', clase: 'num', valor: f => `<strong>${fmtCLP(f.costo_tela)}</strong>` },
+                        { titulo: 'Precio venta', clase: 'num', valor: f => fmtCLP(f.precio_venta) },
+                        { titulo: 'Tela / precio', clase: 'num', valor: f => `${fmtNumero(f.costo_tela_pct)}%` },
+                        ...(editable ? [{ titulo: '', clase: 'acciones', valor: f =>
+                            `<button class="btn btn-small" data-peso="${f.producto_id}|${esc(f.talla)}">Pesar</button>` }] : []),
+                    ], tallas, '', { porPagina: 0 })}
+                </div>`).join('')
+            : '<div class="empty">No hay prendas con peso y tipo de tela. Cargue los pesos con "npm run db:pesos" o desde "Pesar".</div>'}`;
+
+        contenedor.querySelector('[data-colegio]').addEventListener('change', e => {
+            this.colegioTela = e.target.value;
+            this.dibujarTela(contenedor);
+        });
+        contenedor.querySelectorAll('[data-tela]').forEach(b => b.addEventListener('click', () =>
+            this.formularioTela(tiposTela.find(t => t.id === num(b.dataset.tela)), contenedor)));
+        contenedor.querySelectorAll('[data-peso]').forEach(b => b.addEventListener('click', () => {
+            const [productoId, talla] = b.dataset.peso.split('|');
+            this.formularioPeso(filas.find(f => f.producto_id === num(productoId) && f.talla === talla), contenedor);
+        }));
+    },
+
+    formularioTela(tela, contenedor) {
+        const caja = modal.abrir(`Tela ${tela.nombre}`, `
+            <form>
+                <div class="form-grid">
+                    ${campo('Precio por kg ($)', `<input type="number" name="precio_kg" min="0" required value="${tela.precio_kg}">`)}
+                    ${campo('Peso del rollo (kg)', `<input type="number" name="peso_rollo_kg" min="0.1" step="any" required value="${tela.peso_rollo_kg}">`)}
+                    ${campo('Merma (%)', `<input type="number" name="merma" min="0" max="99" step="any" required value="${fmtNumero(tela.merma * 100).replace(',', '.')}">`)}
+                    ${campo('Observación', `<input name="observacion" value="${esc(tela.observacion)}">`)}
                 </div>
-
-                <div class="result-card">
-
-                    <span>
-                        Talla
-                    </span>
-
-                    <strong>
-                        ${talla || "—"}
-                    </strong>
-
-                </div>
-
-                <div class="result-card">
-
-                    <span>
-                        Estado
-                    </span>
-
-                    <strong>
-                        Completar ficha técnica
-                    </strong>
-
-                </div>
-
-            `;
-
-        }
-
-
-        if (
-            selectMaterial
-        ) {
-
-            selectMaterial.innerHTML = `
-
-                <option value="">
-                    Sin ficha técnica
-                </option>
-
-            `;
-
-        }
-
-
-        if (
-            peso
-        ) {
-
-            peso.value =
-                "";
-
-        }
-
-
-        return;
-
-    }
-
-
-    const materiales =
-        obtenerMaterialesPesoFicha(
-            ficha
-        );
-
-
-    estado.className =
-        materiales.length
-        ?
-        "pill pill-green"
-        :
-        "pill pill-yellow";
-
-
-    estado.textContent =
-        materiales.length
-        ?
-        "Ficha vinculada"
-        :
-        "Sin consumo por peso";
-
-
-    datos.innerHTML = `
-
-        <div class="result-card">
-
-            <span>
-                Peso total prenda
-            </span>
-
-            <strong>
-
-                ${
-                    ficha.pesoUnitario
-
-                    ?
-
-                    Number(
-                        ficha.pesoUnitario
-                    )
-                    .toFixed(0)
-                    +
-                    " g"
-
-                    :
-
-                    "Sin registrar"
-                }
-
-            </strong>
-
-        </div>
-
-
-        <div class="result-card">
-
-            <span>
-                Tela principal
-            </span>
-
-            <strong>
-                ${ficha.tipoTela || "—"}
-            </strong>
-
-        </div>
-
-
-        <div class="result-card">
-
-            <span>
-                Color
-            </span>
-
-            <strong>
-                ${ficha.colorTela || "—"}
-            </strong>
-
-        </div>
-
-
-        <div class="result-card">
-
-            <span>
-                Materiales pesables
-            </span>
-
-            <strong>
-                ${materiales.length}
-            </strong>
-
-        </div>
-
-    `;
-
-
-    if (
-        materiales.length
-    ) {
-
-        selectMaterial.innerHTML =
-            materiales
-                .map(
-
-                    item => `
-
-                        <option
-                            value="${item.material.codigo}"
-                        >
-
-                            ${item.material.detalle}
-
-                            ·
-
-                            ${item.gramos.toFixed(2)}
-                            g/prenda
-
-                        </option>
-
-                    `
-
-                )
-                .join("");
-
-    }
-
-    else {
-
-        selectMaterial.innerHTML = `
-
-            <option value="">
-
-                No existen consumos en g/kg
-
-            </option>
-
-        `;
-
-    }
-
-
-    actualizarConsumoMaterialProduccion();
-
-}
-
-
-// ======================================================
-// ACTUALIZAR CONSUMO
-// ======================================================
-
-function actualizarConsumoMaterialProduccion() {
-
-    const ficha =
-        obtenerFichaProduccionSeleccionada();
-
-
-    const codigo =
-        document
-            .getElementById(
-                "prod_material_ficha"
-            )
-            ?.value;
-
-
-    const pesoInput =
-        document.getElementById(
-            "prod_peso"
-        );
-
-
-    const precioInput =
-        document.getElementById(
-            "prod_precio"
-        );
-
-
-    if (
-        !ficha
-        ||
-        !codigo
-    ) {
-
-        pesoInput.value =
-            "";
-
-        return;
-
-    }
-
-
-    const componenteOriginal =
-        ficha.materiales.find(
-
-            item =>
-                item.materialCodigo ===
-                codigo
-
-        );
-
-
-    const componente =
-        normalizarComponenteExistente(
-            componenteOriginal
-        );
-
-
-    const material =
-        db.materiales.find(
-
-            item =>
-                item.codigo ===
-                codigo
-
-        );
-
-
-    const gramos =
-        consumoMaterialEnGramos(
-            componente,
-            material
-        );
-
-
-    if (
-        gramos === null
-    ) {
-
-        pesoInput.value =
-            "";
-
-        return;
-
-    }
-
-
-    pesoInput.value =
-        gramos.toFixed(4);
-
-
-    /*
-        Convertimos el precio a $/kg
-        para el cálculo de merma.
-    */
-
-    const unidadInventario =
-        normalizarUnidadMedida(
-            material.unidad
-        );
-
-
-    let precioKg =
-        null;
-
-
-    if (
-        unidadInventario === "kg"
-    ) {
-
-        precioKg =
-            Number(
-                material.ultimoPrecio
-                ||
-                0
-            );
-
-    }
-
-
-    if (
-        unidadInventario === "g"
-    ) {
-
-        precioKg =
-            Number(
-                material.ultimoPrecio
-                ||
-                0
-            )
-            *
-            1000;
-
-    }
-
-
-    precioInput.value =
-        precioKg
-        ||
-        "";
-
-}
-
-
-// ======================================================
-// EVENTOS
-// ======================================================
-
-document
-    .getElementById(
-        "prod_establecimiento"
-    )
-    ?.addEventListener(
-
-        "change",
-
-        cargarPrendasProduccion
-
-    );
-
-
-document
-    .getElementById(
-        "prod_prenda"
-    )
-    ?.addEventListener(
-
-        "change",
-
-        cargarTallasProduccion
-
-    );
-
-
-document
-    .getElementById(
-        "prod_talla"
-    )
-    ?.addEventListener(
-
-        "change",
-
-        actualizarDatosFichaProduccion
-
-    );
-
-
-// ======================================================
-// CALCULAR RENDIMIENTO
-// ======================================================
-
-function calcularProduccion() {
-
-    const productoId =
-        document
-            .getElementById(
-                "prod_prenda"
-            )
-            .value;
-
-
-    const talla =
-        document
-            .getElementById(
-                "prod_talla"
-            )
-            .value;
-
-
-    const ficha =
-        buscarFichaTecnica(
-            productoId,
-            talla
-        );
-
-
-    if (
-        !ficha
-    ) {
-
-        alert(
-            "Esta talla no tiene ficha técnica."
-        );
-
-        return;
-
-    }
-
-
-    const codigo =
-        document
-            .getElementById(
-                "prod_material_ficha"
-            )
-            .value;
-
-
-    const componenteOriginal =
-        ficha.materiales.find(
-
-            item =>
-                item.materialCodigo ===
-                codigo
-
-        );
-
-
-    const componente =
-        normalizarComponenteExistente(
-            componenteOriginal
-        );
-
-
-    const material =
-        db.materiales.find(
-
-            item =>
-                item.codigo ===
-                codigo
-
-        );
-
-
-    const consumoKg =
-        consumoMaterialKg(
-            componente,
-            material
-        );
-
-
-    if (
-        consumoKg === null
-        ||
-        consumoKg <= 0
-    ) {
-
-        alert(
-            "El material debe tener un consumo registrado en gramos o kilogramos."
-        );
-
-        return;
-
-    }
-
-
-    const consumoGramos =
-        consumoKg * 1000;
-
-
-    const inicial =
-        Number(
-            document
-                .getElementById(
-                    "prod_inicial"
-                )
-                .value
-        );
-
-
-    const sobrante =
-        Number(
-            document
-                .getElementById(
-                    "prod_sobrante"
-                )
-                .value
-        );
-
-
-    const cantidad =
-        Number(
-            document
-                .getElementById(
-                    "prod_cantidad"
-                )
-                .value
-        );
-
-
-    const precioRaw =
-        document
-            .getElementById(
-                "prod_precio"
-            )
-            .value;
-
-
-    const precioKg =
-        precioRaw === ""
-        ?
-        null
-        :
-        Number(precioRaw);
-
-
-    if (
-        inicial <= 0
-        ||
-        sobrante < 0
-        ||
-        sobrante > inicial
-        ||
-        cantidad <= 0
-    ) {
-
-        alert(
-            "Revisa tela inicial, sobrante y cantidad."
-        );
-
-        return;
-
-    }
-
-
-    const telaUtilizada =
-        inicial
-        -
-        sobrante;
-
-
-    const telaIncorporada =
-        cantidad
-        *
-        consumoKg;
-
-
-    if (
-        telaIncorporada >
-        telaUtilizada
-    ) {
-
-        alert(
-
-            "Los datos no son consistentes.\n\n"
-            +
-            "Consumo ficha: "
-            +
-            consumoGramos.toFixed(2)
-            +
-            " g/prenda\n"
-            +
-            "Tela incorporada: "
-            +
-            telaIncorporada.toFixed(4)
-            +
-            " kg\n"
-            +
-            "Tela utilizada: "
-            +
-            telaUtilizada.toFixed(4)
-            +
-            " kg"
-
-        );
-
-        return;
-
-    }
-
-
-    const merma =
-        telaUtilizada
-        -
-        telaIncorporada;
-
-
-    const mermaPct =
-        merma
-        /
-        telaUtilizada
-        *
-        100;
-
-
-    const aprovechamiento =
-        telaIncorporada
-        /
-        telaUtilizada
-        *
-        100;
-
-
-    const rendimiento =
-        cantidad
-        /
-        telaUtilizada;
-
-
-    const consumoRealKg =
-        telaUtilizada
-        /
-        cantidad;
-
-
-    const consumoRealGramos =
-        consumoRealKg
-        *
-        1000;
-
-
-    const diferencia =
-        consumoRealGramos
-        -
-        consumoGramos;
-
-
-    const costoMerma =
-        precioKg !== null
-        ?
-        merma
-        *
-        precioKg
-        :
-        null;
-
-
-    const producto =
-        db.productos.find(
-
-            item =>
-                item.id ===
-                productoId
-
-        );
-
-
-    ultimoCalculoProduccion = {
-
-        id:
-            Date.now()
-            +
-            Math.random(),
-
-        codigo:
-            nextHumanCode(
-                "PROD",
-                db.produccion
-            ),
-
-        fecha:
-            todayStr(),
-
-        establecimiento:
-            producto.establecimiento,
-
-        productoId:
-            producto.id,
-
-        prenda:
-            producto.nombre,
-
-        talla:
-            talla,
-
-        materialCodigo:
-            material.codigo,
-
-        material:
-            material.detalle,
-
-        cantidad:
-            cantidad,
-
-        consumoFichaKg:
-            consumoKg,
-
-        consumoFichaGramos:
-            consumoGramos,
-
-        telaInicial:
-            inicial,
-
-        sobrante:
-            sobrante,
-
-        telaUtilizada:
-            telaUtilizada,
-
-        pesoProduccion:
-            telaIncorporada,
-
-        perdida:
-            merma,
-
-        perdidaPct:
-            mermaPct,
-
-        aprovechamiento:
-            aprovechamiento,
-
-        rendimiento:
-            rendimiento,
-
-        consumoRealUnitarioGramos:
-            consumoRealGramos,
-
-        diferenciaConsumoGramos:
-            diferencia,
-
-        precioTela:
-            precioKg,
-
-        costoPerdida:
-            costoMerma
-
-    };
-
-
-    document
-        .getElementById(
-            "resultadoProduccion"
-        )
-        .innerHTML = `
-
-            <div class="result-card">
-
-                <span>
-                    Consumo ficha
-                </span>
-
-                <strong>
-
-                    ${consumoGramos.toFixed(2)}
-                    g/prenda
-
-                </strong>
-
-            </div>
-
-
-            <div class="result-card">
-
-                <span>
-                    Equivalencia
-                </span>
-
-                <strong>
-
-                    ${consumoKg.toFixed(4)}
-                    kg/prenda
-
-                </strong>
-
-            </div>
-
-
-            <div class="result-card">
-
-                <span>
-                    Tela utilizada
-                </span>
-
-                <strong>
-
-                    ${telaUtilizada.toFixed(4)}
-                    kg
-
-                </strong>
-
-            </div>
-
-
-            <div class="result-card">
-
-                <span>
-                    Tela incorporada
-                </span>
-
-                <strong>
-
-                    ${telaIncorporada.toFixed(4)}
-                    kg
-
-                </strong>
-
-            </div>
-
-
-            <div class="result-card">
-
-                <span>
-                    Merma
-                </span>
-
-                <strong>
-
-                    ${merma.toFixed(4)}
-                    kg
-
-                </strong>
-
-            </div>
-
-
-            <div class="result-card">
-
-                <span>
-                    Merma %
-                </span>
-
-                <strong>
-
-                    ${mermaPct.toFixed(4)}
-                    %
-
-                </strong>
-
-            </div>
-
-
-            <div class="result-card">
-
-                <span>
-                    Aprovechamiento
-                </span>
-
-                <strong>
-
-                    ${aprovechamiento.toFixed(4)}
-                    %
-
-                </strong>
-
-            </div>
-
-
-            <div class="result-card">
-
-                <span>
-                    Rendimiento
-                </span>
-
-                <strong>
-
-                    ${rendimiento.toFixed(4)}
-                    prendas/kg
-
-                </strong>
-
-            </div>
-
-
-            <div class="result-card">
-
-                <span>
-                    Consumo real
-                </span>
-
-                <strong>
-
-                    ${consumoRealGramos.toFixed(2)}
-                    g/prenda
-
-                </strong>
-
-            </div>
-
-
-            <div class="result-card">
-
-                <span>
-                    Diferencia vs ficha
-                </span>
-
-                <strong>
-
-                    ${
-                        diferencia >= 0
-                        ?
-                        "+"
-                        :
-                        ""
-                    }
-
-                    ${diferencia.toFixed(2)}
-                    g/prenda
-
-                </strong>
-
-            </div>
-
-
-            <div class="result-card">
-
-                <span>
-                    Costo merma
-                </span>
-
-                <strong>
-
-                    ${
-                        costoMerma === null
-
-                        ?
-
-                        "Sin precio"
-
-                        :
-
-                        fmtCLP(
-                            costoMerma
-                        )
-                    }
-
-                </strong>
-
-            </div>
-
-        `;
-
-}
-
-
-// ======================================================
-// GUARDAR RENDIMIENTO
-// ======================================================
-
-function guardarCalculoProduccion() {
-
-    if (
-        !ultimoCalculoProduccion
-    ) {
-
-        alert(
-            "Primero realiza un cálculo válido."
-        );
-
-        return;
-
-    }
-
-
-    db.produccion.push(
-        ultimoCalculoProduccion
-    );
-
-
-    registrarActividad(
-
-        "Producción",
-
-        ultimoCalculoProduccion.codigo
-        +
-        " · "
-        +
-        ultimoCalculoProduccion.prenda
-        +
-        " · "
-        +
-        ultimoCalculoProduccion.material
-        +
-        " · merma "
-        +
-        ultimoCalculoProduccion.perdidaPct.toFixed(2)
-        +
-        "%",
-
-        {
-            referencia:
-                ultimoCalculoProduccion.codigo,
-
-            accion:
-                "Guardar rendimiento y merma"
-        }
-
-    );
-
-
-    persist();
-
-
-    ultimoCalculoProduccion =
-        null;
-
-
-    renderAll();
-
-}
-
-
-// ======================================================
-// ======================================================
-// ÓRDENES DE PRODUCCIÓN
-// ======================================================
-// ======================================================
-
-
-// ======================================================
-// PRODUCTOS ORDEN
-// ======================================================
-
-function cargarProductosOrden() {
-
-    const select =
-        document.getElementById(
-            "op_producto"
-        );
-
-
-    if (
-        !select
-    ) {
-
-        return;
-
-    }
-
-
-    select.innerHTML =
-        db.productos
-            .map(
-
-                producto => `
-
-                    <option
-                        value="${producto.id}"
-                    >
-
-                        ${producto.establecimiento}
-                        ·
-                        ${producto.nombre}
-
-                    </option>
-
-                `
-
-            )
-            .join("");
-
-
-    cargarTallasOrden();
-
-}
-
-
-// ======================================================
-// TALLAS ORDEN
-// ======================================================
-
-function cargarTallasOrden() {
-
-    const producto =
-        db.productos.find(
-
-            item =>
-                item.id ===
-                document
-                    .getElementById(
-                        "op_producto"
-                    )
-                    ?.value
-
-        );
-
-
-    const select =
-        document.getElementById(
-            "op_talla"
-        );
-
-
-    if (
-        !select
-        ||
-        !producto
-    ) {
-
-        return;
-
-    }
-
-
-    select.innerHTML =
-        obtenerTallasProducto(
-            producto
-        )
-        .map(
-
-            talla => `
-
-                <option value="${talla}">
-
-                    ${talla}
-
-                </option>
-
-            `
-
-        )
-        .join("");
-
-}
-
-
-// ======================================================
-// EVENTO ORDEN
-// ======================================================
-
-document
-    .getElementById(
-        "op_producto"
-    )
-    ?.addEventListener(
-
-        "change",
-
-        cargarTallasOrden
-
-    );
-
-
-// ======================================================
-// ABRIR ORDEN
-// ======================================================
-
-function openOrdenModal() {
-
-    cargarProductosOrden();
-
-
-    document.getElementById(
-        "op_fecha"
-    ).value =
-        todayStr();
-
-
-    document.getElementById(
-        "op_cantidad"
-    ).value =
-        "";
-
-
-    document.getElementById(
-        "op_observacion"
-    ).value =
-        "";
-
-
-    openModal(
-        "modalOrden"
-    );
-
-}
-
-
-// ======================================================
-// GUARDAR ORDEN
-// ======================================================
-
-function saveOrden() {
-
-    const productoId =
-        document
-            .getElementById(
-                "op_producto"
-            )
-            .value;
-
-
-    const producto =
-        db.productos.find(
-
-            item =>
-                item.id ===
-                productoId
-
-        );
-
-
-    const talla =
-        document
-            .getElementById(
-                "op_talla"
-            )
-            .value;
-
-
-    const cantidad =
-        Number(
-            document
-                .getElementById(
-                    "op_cantidad"
-                )
-                .value
-        );
-
-
-    if (
-        !producto
-        ||
-        !talla
-        ||
-        cantidad <= 0
-    ) {
-
-        alert(
-            "Revisa producto, talla y cantidad."
-        );
-
-        return;
-
-    }
-
-
-    const orden = {
-
-        id:
-            Date.now()
-            +
-            Math.random(),
-
-        codigo:
-            nextHumanCode(
-                "OP",
-                db.ordenesProduccion
-            ),
-
-        fecha:
-            document
-                .getElementById(
-                    "op_fecha"
-                )
-                .value,
-
-        productoId:
-            producto.id,
-
-        establecimiento:
-            producto.establecimiento,
-
-        producto:
-            producto.nombre,
-
-        talla:
-            talla,
-
-        cantidad:
-            cantidad,
-
-        estado:
-            "Pendiente",
-
-        observacion:
-            document
-                .getElementById(
-                    "op_observacion"
-                )
-                .value
-                .trim(),
-
-        materialesDescontados:
-            false,
-
-        stockIngresado:
-            false,
-
-        fechaFinalizacion:
-            null
-
-    };
-
-
-    db.ordenesProduccion.push(
-        orden
-    );
-
-
-    persist();
-
-    closeModal(
-        "modalOrden"
-    );
-
-    renderAll();
-
-}
-
-
-// ======================================================
-// BUSCAR FICHA
-// ======================================================
-
-function buscarFichaTecnica(
-    productoId,
-    talla
-) {
-
-    return db.fichasTecnicas.find(
-
-        ficha =>
-            ficha.productoId ===
-            productoId
-
-            &&
-
-            String(ficha.talla)
-            ===
-            String(talla)
-
-    );
-
-}
-
-
-// ======================================================
-// REQUERIMIENTOS ORDEN
-// ======================================================
-
-function obtenerMaterialesRequeridosOrden(
-    orden
-) {
-
-    const ficha =
-        buscarFichaTecnica(
-
-            orden.productoId,
-
-            orden.talla
-
-        );
-
-
-    if (
-        !ficha
-    ) {
-
-        return [];
-
-    }
-
-
-    return (
-        ficha.materiales
-        ||
-        []
-    )
-    .map(
-
-        componenteOriginal => {
-
-            const componente =
-                normalizarComponenteExistente(
-                    componenteOriginal
-                );
-
-
-            const material =
-                db.materiales.find(
-
-                    item =>
-                        item.codigo ===
-                        componente.materialCodigo
-
-                );
-
-
-            const unitario =
-                cantidadInventarioProduccion(
-
-                    componente,
-
-                    material
-
-                );
-
-
-            const total =
-                unitario
-                *
-                Number(
-                    orden.cantidad
-                );
-
-
-            return {
-
-                materialCodigo:
-                    componente.materialCodigo,
-
-                materialNombre:
-                    material?.detalle
-                    ||
-                    componente.materialCodigo,
-
-                cantidadUnitario:
-                    unitario,
-
-                cantidadTotal:
-                    total,
-
-                unidad:
-                    material?.unidad
-                    ||
-                    "",
-
-                ultimoPrecio:
-                    Number(
-                        material?.ultimoPrecio
-                        ||
-                        0
-                    ),
-
-                costoEstimado:
-                    total
-                    *
-                    Number(
-                        material?.ultimoPrecio
-                        ||
-                        0
-                    ),
-
-                entradaTexto:
-
-                    componente.cantidadEntrada !==
-                    undefined
-
-                    ?
-
-                    componente.cantidadEntrada
-                    +
-                    " "
-                    +
-                    componente.unidadEntrada
-
-                    :
-
-                    unitario
-                    +
-                    " "
-                    +
-                    material?.unidad
-
-            };
-
-        }
-
-    );
-
-}
-
-
-// ======================================================
-// VALIDAR MATERIALES
-// ======================================================
-
-function validarMaterialesOrden(
-    orden
-) {
-
-    const materiales =
-        obtenerMaterialesRequeridosOrden(
-            orden
-        );
-
-
-    if (
-        !materiales.length
-    ) {
-
-        return {
-
-            ok:
-                false,
-
-            mensaje:
-                "La ficha técnica no tiene materiales definidos."
-
-        };
-
-    }
-
-
-    const problemas =
-        [];
-
-
-    materiales.forEach(
-
-        requerido => {
-
-            const material =
-                db.materiales.find(
-
-                    item =>
-                        item.codigo ===
-                        requerido.materialCodigo
-
-                );
-
-
-            if (
-                !material
-            ) {
-
-                problemas.push(
-                    requerido.materialNombre
-                    +
-                    ": no encontrado"
-                );
-
-                return;
-
-            }
-
-
-            if (
-                material.stock ===
-                null
-                ||
-                material.stock ===
-                undefined
-            ) {
-
-                problemas.push(
-                    material.detalle
-                    +
-                    ": sin conteo físico"
-                );
-
-                return;
-
-            }
-
-
-            if (
-                Number(material.stock)
-                <
-                requerido.cantidadTotal
-            ) {
-
-                problemas.push(
-
-                    material.detalle
-                    +
-                    ": requiere "
-                    +
-                    requerido.cantidadTotal.toFixed(4)
-                    +
-                    " "
-                    +
-                    material.unidad
-                    +
-                    " y existen "
-                    +
-                    Number(material.stock).toFixed(4)
-
-                );
-
-            }
-
-        }
-
-    );
-
-
-    return {
-
-        ok:
-            problemas.length ===
-            0,
-
-        mensaje:
-            problemas.join(
-                "\n"
-            )
-
-    };
-
-}
-
-
-// ======================================================
-// DESCONTAR MATERIALES
-// ======================================================
-
-function descontarMaterialesOrden(
-    orden
-) {
-
-    const materiales =
-        obtenerMaterialesRequeridosOrden(
-            orden
-        );
-
-
-    materiales.forEach(
-
-        requerido => {
-
-            const material =
-                db.materiales.find(
-
-                    item =>
-                        item.codigo ===
-                        requerido.materialCodigo
-
-                );
-
-
-            const anterior =
-                Number(
-                    material.stock
-                );
-
-
-            material.stock =
-                anterior
-                -
-                requerido.cantidadTotal;
-
-
-            registrarMovimientoInventario({
-
-                tipo:
-                    "Consumo producción",
-
-                categoria:
-                    "Material",
-
-                referencia:
-                    orden.codigo,
-
-                itemCodigo:
-                    material.codigo,
-
-                itemNombre:
-                    material.detalle,
-
-                cantidad:
-                    -requerido.cantidadTotal,
-
-                unidad:
-                    material.unidad,
-
-                stockAnterior:
-                    anterior,
-
-                stockNuevo:
-                    material.stock
-
+                <p class="helper-text">Todos los costos y rendimientos de esta tela se recalculan al guardar.</p>
+                ${PIE_FORM()}
+            </form>`);
+        alEnviar(caja.querySelector('form'), async datos => {
+            await api.put(`/tipos-tela/${tela.id}`, {
+                precio_kg: num(datos.precio_kg), peso_rollo_kg: num(datos.peso_rollo_kg),
+                merma: num(datos.merma) / 100, observacion: datos.observacion,
             });
+            compartido.refrescar('catalogos');
+            modal.cerrar();
+            aviso(`Parámetros de ${tela.nombre} actualizados.`);
+            await this.dibujarTela(contenedor);
+        });
+    },
 
-        }
+    formularioPeso(fila, contenedor) {
+        const caja = modal.abrir(`Peso · ${fila.producto} T${fila.talla}`, `
+            <form>
+                <div class="form-grid">
+                    ${campo('Peso de la prenda terminada (g)', `<input type="number" name="peso" min="1" step="any" required value="${fila.peso_unitario_g}">`)}
+                    <label class="interruptor"><input type="checkbox" name="estimado" ${fila.peso_estimado ? 'checked' : ''}> Es una estimación (no se pesó)</label>
+                </div>
+                ${PIE_FORM()}
+            </form>`);
+        alEnviar(caja.querySelector('form'), async datos => {
+            await api.patch(`/produccion/fichas/${fila.producto_id}/${encodeURIComponent(fila.talla)}/peso`, {
+                peso_unitario_g: num(datos.peso), peso_estimado: datos.estimado === 'on',
+            });
+            modal.cerrar();
+            aviso('Peso actualizado.');
+            await this.dibujarTela(contenedor);
+        });
+    },
 
-    );
+    // ---------- Alertas de entrega ----------
 
+    dibujarAlertas(contenedor) {
+        const urgentes = this.ordenes.filter(o => o.alerta === 'Atrasada' || o.alerta === 'Por vencer');
+        contenedor.innerHTML = urgentes.length ? `
+            <div class="alertas">
+                ${urgentes.map(o => `
+                    <div class="alerta ${o.alerta === 'Atrasada' ? 'atrasada' : ''}" data-orden="${o.id}" style="cursor:pointer">
+                        <strong>${textoPlazo(o.dias_restantes)} · ${esc(o.codigo)}</strong>
+                        ${o.cantidad} × ${esc(o.producto)} T${esc(o.talla)}
+                        <span class="sub">${o.cliente_nombre ? 'Para ' + esc(o.cliente_nombre) : 'Para stock'} · entrega ${fmtFecha(o.fecha_entrega)} · ${esc(o.estado)}</span>
+                    </div>`).join('')}
+            </div>` : '';
+        contenedor.querySelectorAll('[data-orden]').forEach(el =>
+            el.addEventListener('click', () => this.detalleOrden(num(el.dataset.orden))));
+    },
 
-    orden.materialesDescontados =
-        true;
+    // ---------- Calendario mensual ----------
 
-}
+    dibujarCalendario(contenedor) {
+        const sinFecha = this.ordenes.filter(o => !o.fecha_entrega && o.estado !== 'Terminada');
+        contenedor.innerHTML = `
+            <div class="panel" data-calendario></div>
+            ${sinFecha.length ? `
+                <div class="panel" style="margin-top:16px">
+                    <div class="panel-title-row"><h3>Órdenes sin fecha de entrega</h3></div>
+                    ${tabla([
+                        { titulo: 'Orden', valor: o => esc(o.codigo) },
+                        { titulo: 'Prenda', valor: o => `${o.cantidad} × ${esc(o.producto)} T${esc(o.talla)}` },
+                        { titulo: 'Estado', valor: o => badge(o.estado) },
+                        { titulo: '', clase: 'acciones', valor: o => `<button class="btn btn-small" data-orden="${o.id}">Asignar fecha</button>` },
+                    ], sinFecha)}
+                </div>` : ''}`;
 
+        const dibujar = () => calendarioMes(contenedor.querySelector('[data-calendario]'), {
+            mes: this.mes,
+            eventos: this.ordenes.filter(o => o.fecha_entrega).map(o => ({
+                fecha: o.fecha_entrega,
+                texto: `${o.cantidad}× ${o.producto} T${o.talla}`,
+                titulo: `${o.codigo} · ${o.cantidad} × ${o.producto} T${o.talla} · ${o.estado}`,
+                clase: CLASE_ALERTA[o.alerta] || '',
+                alClick: () => this.detalleOrden(o.id),
+            })),
+            alCambiarMes: nuevo => { this.mes = nuevo; dibujar(); },
+        });
+        dibujar();
+        contenedor.querySelectorAll('[data-orden]').forEach(b =>
+            b.addEventListener('click', () => this.detalleOrden(num(b.dataset.orden))));
+    },
 
-// ======================================================
-// INGRESAR PRENDA
-// ======================================================
+    // ---------- Lista (en curso / terminadas) ----------
 
-function ingresarStockOrden(
-    orden
-) {
+    dibujarLista(contenedor) {
+        const terminadas = this.pestana === 'terminadas';
+        const filas = this.ordenes.filter(o => terminadas === (o.estado === 'Terminada'));
+        contenedor.innerHTML = `<div class="table-wrap">${tabla([
+            { titulo: 'Orden', valor: o => `<strong>${esc(o.codigo)}</strong><span class="sub">Creada ${fmtFecha(o.fecha)}</span>` },
+            { titulo: 'Producto', valor: o => `${esc(o.producto)}<span class="sub">${esc(o.establecimiento)}</span>` },
+            { titulo: 'Talla', valor: o => esc(o.talla) },
+            { titulo: 'Cantidad', clase: 'num', valor: o => o.cantidad },
+            { titulo: 'Para', valor: o => o.venta_codigo ? `${esc(o.cliente_nombre)}<span class="sub">Encargo ${esc(o.venta_codigo)}</span>` : '<span class="muted">Stock</span>' },
+            { titulo: 'Entrega', valor: o => terminadas
+                ? `Terminada ${fmtFecha(o.fecha_finalizacion)}`
+                : `${badge(o.alerta)}<span class="sub">${o.fecha_entrega ? textoPlazo(o.dias_restantes) + ' · ' + fmtFecha(o.fecha_entrega) : ''}</span>` },
+            { titulo: 'Estado', valor: o => badge(o.estado) },
+            { titulo: '', clase: 'acciones', valor: o => `<button class="btn btn-small" data-orden="${o.id}">Ver</button>` },
+        ], filas, terminadas ? 'Aún no hay órdenes terminadas.' : 'No hay órdenes en curso.')}</div>`;
 
-    let stock =
-        obtenerRegistroStockPrenda(
+        contenedor.querySelectorAll('[data-orden]').forEach(b =>
+            b.addEventListener('click', () => this.detalleOrden(num(b.dataset.orden))));
+    },
 
-            orden.productoId,
+    // ---------- Detalle de una orden: avanzar, reprogramar, eliminar ----------
 
-            orden.talla
+    async detalleOrden(id) {
+        const o = await api.get(`/produccion/ordenes/${id}`);
+        const abierta = o.estado !== 'Terminada';
+        const materiales = o.materiales_requeridos;
 
-        );
+        const caja = modal.abrir(`${o.codigo} · ${o.producto} T${o.talla}`, `
+            <div class="form-grid">
+                <div><span class="muted">Cantidad</span><br><strong>${o.cantidad}</strong> prendas</div>
+                <div><span class="muted">Estado</span><br>${badge(o.estado)}</div>
+                <div><span class="muted">Para</span><br>${o.venta_codigo ? `${esc(o.cliente_nombre)} (encargo ${esc(o.venta_codigo)})` : 'Stock'}</div>
+                <div><span class="muted">Entrega</span><br>${abierta ? `${badge(o.alerta)} <span class="sub">${o.fecha_entrega ? textoPlazo(o.dias_restantes) + ' · ' + fmtFecha(o.fecha_entrega) : 'Sin fecha'}</span>` : `Terminada ${fmtFecha(o.fecha_finalizacion)}`}</div>
+                ${o.observacion ? `<div class="full"><span class="muted">Observación</span><br>${esc(o.observacion)}</div>` : ''}
+            </div>
 
+            ${o.tela_necesaria ? `
+                <p class="aviso">Tela necesaria: <strong>${fmtNumero(o.tela_necesaria.kg)} kg de ${esc(o.tela_necesaria.tipo_tela)}</strong>
+                    (≈ ${fmtNumero(o.tela_necesaria.rollos)} rollos de ${fmtNumero(o.tela_necesaria.peso_rollo_kg)} kg) · costo de tela ${fmtCLP(o.tela_necesaria.costo)}
+                    ${o.tela_necesaria.peso_estimado ? '<br><span class="sub">Calculado con un peso estimado.</span>' : ''}</p>` : ''}
 
-    if (
-        !stock
-    ) {
+            ${abierta && materiales.length ? `
+                <h3>Materiales según ficha</h3>
+                ${tabla([
+                    { titulo: 'Material', valor: m => esc(m.material) },
+                    { titulo: 'Se usa', clase: 'num', valor: m => `${fmtNumero(m.cantidad_total)} ${esc(m.unidad)}` },
+                    { titulo: 'Disponible', clase: 'num', valor: m => `<span class="${(m.stock ?? 0) < m.cantidad_total ? 'atrasado' : ''}">${fmtNumero(m.stock)} ${esc(m.unidad)}</span>` },
+                ], materiales)}` : ''}
 
-        stock = {
+            ${abierta ? `
+                <form class="form-grid" data-fecha style="margin-top:12px">
+                    ${campo('Reprogramar entrega', `<input type="date" name="fecha_entrega" value="${esc(o.fecha_entrega || '')}" required>`)}
+                    <div class="field"><label>&nbsp;</label><button type="submit" class="btn">Guardar fecha</button></div>
+                    <p class="error-form full"></p>
+                </form>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-danger" data-eliminar>Eliminar</button>
+                    ${o.estado === 'Pendiente'
+                        ? '<button type="button" class="btn btn-primary" data-iniciar>Iniciar (En proceso)</button>'
+                        : `<button type="button" class="btn btn-primary" data-terminar>Terminar · ${o.cantidad} prendas al stock</button>`}
+                </div>` : ''}`, { ancho: true });
 
-            id:
-                "STP-"
-                +
-                Date.now(),
+        if (!abierta) return;
 
-            productoId:
-                orden.productoId,
+        // Si se abrió desde otra vista (ej. el calendario de Inicio), solo cierra.
+        const recargar = async () => { modal.cerrar(); if (vistaVisible('produccion')) await this.cargar(); };
 
-            talla:
-                orden.talla,
+        alEnviar(caja.querySelector('[data-fecha]'), async datos => {
+            await api.patch(`/produccion/ordenes/${id}/fecha`, datos);
+            aviso('Fecha de entrega actualizada.');
+            await recargar();
+        });
+        caja.querySelector('[data-iniciar]')?.addEventListener('click', () => intentar(async () => {
+            await api.patch(`/produccion/ordenes/${id}/estado`, { estado: 'En proceso' });
+            await recargar();
+        }, `${o.codigo} en proceso.`));
+        caja.querySelector('[data-terminar]')?.addEventListener('click', () => {
+            const avisoMateriales = materiales.length ? ' y se descontarán los materiales de la ficha' : '';
+            if (!confirm(`¿Terminar ${o.codigo}? Entrarán ${o.cantidad} prendas al stock${avisoMateriales}.`)) return;
+            intentar(async () => {
+                await api.patch(`/produccion/ordenes/${id}/estado`, { estado: 'Terminada' });
+                await recargar();
+            }, `Orden terminada. ${o.cantidad} prendas sumadas al stock.`);
+        });
+        caja.querySelector('[data-eliminar]').addEventListener('click', () => {
+            if (!confirm(`¿Eliminar ${o.codigo}?`)) return;
+            intentar(async () => {
+                await api.delete(`/produccion/ordenes/${id}`);
+                await recargar();
+            }, 'Orden eliminada.');
+        });
+    },
 
-            stock:
-                0,
-
-            stockMinimo:
-                null,
-
-            stockObjetivo:
-                null
-
+    // Selector producto + talla reutilizado por orden y ficha.
+    async selectorPrenda(form, productoId = null, talla = null) {
+        const productos = await compartido.obtener('productos');
+        const selProducto = form.querySelector('[name=producto_id]');
+        const selTalla = form.querySelector('[name=talla]');
+        selProducto.innerHTML = opciones(productos, { texto: nombreProducto, seleccionado: productoId, vacio: 'Elegir producto...' });
+        const llenarTallas = () => {
+            const p = productos.find(x => x.id === num(selProducto.value));
+            selTalla.innerHTML = opciones(tallasProducto(p), { valor: 'talla', texto: 'talla', seleccionado: talla });
         };
-
-
-        db.stockPrendas.push(
-            stock
-        );
-
-    }
-
-
-    stock.stock =
-        Number(
-            stock.stock
-            ||
-            0
-        )
-        +
-        Number(
-            orden.cantidad
-        );
-
-
-    orden.stockIngresado =
-        true;
-
-}
-
-
-// ======================================================
-// CAMBIAR ESTADO
-// ======================================================
-
-function cambiarEstadoOrden(
-    id,
-    estadoNuevo
-) {
-
-    const orden =
-        db.ordenesProduccion.find(
-
-            item =>
-                item.id === id
-
-        );
-
-
-    if (
-        !orden
-    ) {
-
-        return;
-
-    }
-
-
-    if (
-        orden.estado ===
-        "Finalizado"
-    ) {
-
-        alert(
-            "La orden ya se encuentra finalizada."
-        );
-
-        renderAll();
-
-        return;
-
-    }
-
-
-    if (
-        estadoNuevo !==
-        "Finalizado"
-    ) {
-
-        orden.estado =
-            estadoNuevo;
-
-
-        persist();
-
-        renderAll();
-
-        return;
-
-    }
-
-
-    const validacion =
-        validarMaterialesOrden(
-            orden
-        );
-
-
-    if (
-        !validacion.ok
-    ) {
-
-        alert(
-
-            "No se puede finalizar.\n\n"
-            +
-            validacion.mensaje
-
-        );
-
-        renderAll();
-
-        return;
-
-    }
-
-
-    const materiales =
-        obtenerMaterialesRequeridosOrden(
-            orden
-        );
-
-
-    const resumen =
-        materiales
-            .map(
-
-                item =>
-
-                    "• "
-                    +
-                    item.materialNombre
-                    +
-                    ": "
-                    +
-                    item.cantidadTotal.toFixed(4)
-                    +
-                    " "
-                    +
-                    item.unidad
-
-            )
-            .join(
-                "\n"
-            );
-
-
-    if (
-        !confirm(
-
-            "¿Finalizar "
-            +
-            orden.codigo
-            +
-            "?\n\n"
-            +
-            resumen
-
-        )
-    ) {
-
-        renderAll();
-
-        return;
-
-    }
-
-
-    if (
-        !orden.materialesDescontados
-    ) {
-
-        descontarMaterialesOrden(
-            orden
-        );
-
-    }
-
-
-    if (
-        !orden.stockIngresado
-    ) {
-
-        ingresarStockOrden(
-            orden
-        );
-
-    }
-
-
-    orden.estado =
-        "Finalizado";
-
-
-    orden.fechaFinalizacion =
-        todayStr();
-
-
-    persist();
-
-    renderAll();
-
-}
-
-
-// ======================================================
-// SLUG ESTADO
-// ======================================================
-
-function slugEstado(texto) {
-
-    return String(
-        texto || ""
-    )
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(
-        /[\u0300-\u036f]/g,
-        ""
-    )
-    .replace(
-        /\s+/g,
-        "-"
-    );
-
-}
-
-
-// ======================================================
-// IMPRIMIR ORDEN
-// ======================================================
-
-function imprimirOrdenProduccion(id) {
-
-    const orden =
-        db.ordenesProduccion.find(
-
-            item =>
-                item.id === id
-
-        );
-
-
-    if (
-        !orden
-    ) {
-
-        return;
-
-    }
-
-
-    const ficha =
-        buscarFichaTecnica(
-            orden.productoId,
-            orden.talla
-        );
-
-
-    const materiales =
-        obtenerMaterialesRequeridosOrden(
-            orden
-        );
-
-
-    const filas =
-        materiales
-            .map(
-
-                item => `
-
-                    <tr>
-
-                        <td>
-                            ${item.materialNombre}
-                        </td>
-
-                        <td>
-                            ${item.entradaTexto}
-                        </td>
-
-                        <td>
-
-                            ${item.cantidadUnitario.toFixed(4)}
-                            ${item.unidad}
-
-                        </td>
-
-                        <td>
-
-                            ${item.cantidadTotal.toFixed(4)}
-                            ${item.unidad}
-
-                        </td>
-
-                        <td>
-                            ${fmtCLP(
-                                item.costoEstimado
-                            )}
-                        </td>
-
-                    </tr>
-
-                `
-
-            )
-            .join("");
-
-
-    const ventana =
-        window.open(
-            "",
-            "_blank"
-        );
-
-
-    if (
-        !ventana
-    ) {
-
-        alert(
-            "El navegador bloqueó la impresión."
-        );
-
-        return;
-
-    }
-
-
-    ventana.document.write(`
-
-        <!DOCTYPE html>
-
-        <html lang="es">
-
-        <head>
-
-            <meta charset="UTF-8">
-
-            <title>
-                ${orden.codigo}
-            </title>
-
-            <style>
-
-                body {
-                    padding: 35px;
-                    font-family: Arial, sans-serif;
-                    color: #172033;
-                }
-
-                .header {
-                    display:flex;
-                    justify-content:space-between;
-                    border-bottom:3px solid #172033;
-                }
-
-                table {
-                    width:100%;
-                    border-collapse:collapse;
-                    margin-top:20px;
-                }
-
-                th,
-                td {
-                    padding:8px;
-                    border-bottom:1px solid #ddd;
-                    text-align:left;
-                }
-
-                th {
-                    background:#f3f4f6;
-                }
-
-                .datos {
-                    display:grid;
-                    grid-template-columns:repeat(4,1fr);
-                    gap:10px;
-                    margin-top:20px;
-                }
-
-                .dato {
-                    border:1px solid #ddd;
-                    padding:12px;
-                    border-radius:8px;
-                }
-
-                .dato span {
-                    display:block;
-                    color:#667085;
-                    font-size:10px;
-                }
-
-                @page {
-                    size:A4;
-                    margin:12mm;
-                }
-
-            </style>
-
-        </head>
-
-        <body>
-
-            <div class="header">
-
-                <div>
-
-                    <h1>
-                        PATYCA Confecciones
-                    </h1>
-
-                    <p>
-                        Orden de producción
-                    </p>
-
+        selProducto.addEventListener('change', llenarTallas);
+        llenarTallas();
+    },
+
+    async formularioOrden() {
+        const caja = modal.abrir('Nueva orden de producción', `
+            <form>
+                <div class="form-grid">
+                    ${campo('Producto', '<select name="producto_id" required></select>', 'full')}
+                    ${campo('Talla', '<select name="talla" required></select>')}
+                    ${campo('Cantidad', '<input type="number" name="cantidad" min="1" required>')}
+                    ${campo('Fecha de entrega', '<input type="date" name="fecha_entrega" required>')}
+                    ${campo('Observación', '<input name="observacion">', 'full')}
                 </div>
+                ${PIE_FORM('Crear orden')}
+            </form>`);
+        const form = caja.querySelector('form');
+        await this.selectorPrenda(form);
 
-                <h2>
-                    ${orden.codigo}
-                </h2>
+        alEnviar(form, async datos => {
+            const orden = await api.post('/produccion/ordenes', { ...datos, producto_id: num(datos.producto_id), cantidad: num(datos.cantidad) });
+            modal.cerrar();
+            aviso(`Orden ${orden.codigo} creada.`);
+            await this.cargar();
+        });
+    },
 
-            </div>
-
-
-            <h2>
-                ${orden.producto}
-            </h2>
-
-
-            <div class="datos">
-
-                <div class="dato">
-
-                    <span>Talla</span>
-
-                    <strong>
-                        ${orden.talla}
-                    </strong>
-
+    // Ficha de materiales: cuánto material usa UNA prenda (en la unidad del inventario).
+    async formularioFicha(ficha = null) {
+        const materiales = await compartido.obtener('materiales');
+        const caja = modal.abrir(ficha ? `Ficha · ${ficha.producto} T${ficha.talla}` : 'Ficha de materiales', `
+            <form>
+                <p class="helper-text">Indique cuánto material usa <strong>una</strong> prenda, en la unidad del inventario (ej: 0,25 kg de franela).</p>
+                <div class="form-grid">
+                    ${campo('Producto', `<select name="producto_id" required ${ficha ? 'disabled' : ''}></select>`, 'full')}
+                    ${campo('Talla', `<select name="talla" required ${ficha ? 'disabled' : ''}></select>`)}
                 </div>
-
-                <div class="dato">
-
-                    <span>Cantidad</span>
-
-                    <strong>
-                        ${orden.cantidad}
-                    </strong>
-
-                </div>
-
-                <div class="dato">
-
-                    <span>Peso prenda</span>
-
-                    <strong>
-
-                        ${
-                            ficha?.pesoUnitario
-
-                            ?
-
-                            Number(
-                                ficha.pesoUnitario
-                            )
-                            .toFixed(0)
-                            +
-                            " g"
-
-                            :
-
-                            "—"
-                        }
-
-                    </strong>
-
-                </div>
-
-                <div class="dato">
-
-                    <span>Estado</span>
-
-                    <strong>
-                        ${orden.estado}
-                    </strong>
-
-                </div>
-
-            </div>
-
-
-            <h3>
-                Materiales
-            </h3>
-
-
-            <table>
-
-                <thead>
-
-                    <tr>
-
-                        <th>
-                            Material
-                        </th>
-
-                        <th>
-                            Ingreso ficha
-                        </th>
-
-                        <th>
-                            Consumo inventario
-                        </th>
-
-                        <th>
-                            Total orden
-                        </th>
-
-                        <th>
-                            Costo
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    ${filas}
-
-                </tbody>
-
-            </table>
-
-
-            <script>
-
-                window.onload = function() {
-
-                    window.print();
-
-                };
-
-            <\/script>
-
-        </body>
-
-        </html>
-
-    `);
-
-
-    ventana.document.close();
-
-}
-
-
-// ======================================================
-// RENDER ÓRDENES
-// ======================================================
-
-function renderOrdenes() {
-
-    const tbody =
-        document.getElementById(
-            "tablaOrdenes"
-        );
-
-
-    const cards =
-        document.getElementById(
-            "ordenesCards"
-        );
-
-
-    if (
-        !tbody
-        ||
-        !cards
-    ) {
-
-        return;
-
-    }
-
-
-    const abiertas =
-        db.ordenesProduccion.filter(
-
-            item =>
-                item.estado !==
-                "Finalizado"
-
-        );
-
-
-    const terminadas =
-        db.ordenesProduccion.filter(
-
-            item =>
-                item.estado ===
-                "Finalizado"
-
-        );
-
-
-    cards.innerHTML = `
-
-        <div class="card">
-
-            <div class="num">
-                ${db.ordenesProduccion.length}
-            </div>
-
-            <div class="lbl">
-                Órdenes totales
-            </div>
-
-        </div>
-
-
-        <div class="card warning">
-
-            <div class="num">
-                ${abiertas.length}
-            </div>
-
-            <div class="lbl">
-                Abiertas
-            </div>
-
-        </div>
-
-
-        <div class="card good">
-
-            <div class="num">
-                ${terminadas.length}
-            </div>
-
-            <div class="lbl">
-                Finalizadas
-            </div>
-
-        </div>
-
-    `;
-
-
-    tbody.innerHTML =
-        db.ordenesProduccion.length
-
-        ?
-
-        db.ordenesProduccion
-            .slice()
-            .reverse()
-            .map(
-
-                orden => `
-
-                    <tr>
-
-                        <td>
-                            ${orden.codigo}
-                        </td>
-
-                        <td>
-                            ${orden.fecha}
-                        </td>
-
-                        <td>
-                            ${orden.establecimiento}
-                        </td>
-
-                        <td>
-                            ${orden.producto}
-                        </td>
-
-                        <td>
-                            ${orden.talla}
-                        </td>
-
-                        <td>
-                            ${orden.cantidad}
-                        </td>
-
-                        <td>
-
-                            <span
-                                class="
-                                status-badge
-                                status-${slugEstado(
-                                    orden.estado
-                                )}
-                                "
-                            >
-
-                                ${orden.estado}
-
-                            </span>
-
-                        </td>
-
-                        <td>
-
-                            <div class="actions">
-
-                                ${
-                                    orden.estado !==
-                                    "Finalizado"
-
-                                    ?
-
-                                    `
-
-                                    <select
-
-                                        class="inline-select"
-
-                                        onchange="
-                                        cambiarEstadoOrden(
-                                            ${orden.id},
-                                            this.value
-                                        )
-                                        "
-
-                                    >
-
-                                        ${
-                                            [
-                                                "Pendiente",
-                                                "Corte",
-                                                "Confección",
-                                                "Terminación",
-                                                "Finalizado"
-                                            ]
-                                            .map(
-
-                                                estado => `
-
-                                                    <option
-
-                                                        value="${estado}"
-
-                                                        ${
-                                                            orden.estado === estado
-                                                            ?
-                                                            "selected"
-                                                            :
-                                                            ""
-                                                        }
-
-                                                    >
-
-                                                        ${estado}
-
-                                                    </option>
-
-                                                `
-
-                                            )
-                                            .join("")
-                                        }
-
-                                    </select>
-
-                                    `
-
-                                    :
-
-                                    `
-
-                                    <span class="
-                                        pill
-                                        pill-green
-                                    ">
-                                        Cerrada
-                                    </span>
-
-                                    `
-                                }
-
-
-                                <button
-
-                                    class="
-                                    btn
-                                    btn-small
-                                    "
-
-                                    onclick="
-                                    imprimirOrdenProduccion(
-                                        ${orden.id}
-                                    )
-                                    "
-
-                                >
-                                    Imprimir
-                                </button>
-
-                            </div>
-
-                        </td>
-
-                    </tr>
-
-                `
-
-            )
-            .join("")
-
-        :
-
-        `
-
-            <tr>
-
-                <td
-                    colspan="8"
-                    class="empty"
-                >
-                    No existen órdenes.
-                </td>
-
-            </tr>
-
-        `;
-
-}
-
-
-// ======================================================
-// RENDER HISTORIAL RENDIMIENTO
-// ======================================================
-
-function renderProduccion() {
-
-    asegurarCamposFichaProduccion();
-
-
-    const tbody =
-        document.getElementById(
-            "tablaProduccion"
-        );
-
-
-    if (
-        !tbody
-    ) {
-
-        return;
-
-    }
-
-
-    tbody.innerHTML =
-        db.produccion.length
-
-        ?
-
-        db.produccion
-            .slice()
-            .reverse()
-            .map(
-
-                registro => `
-
-                    <tr>
-
-                        <td>
-                            ${registro.codigo || "—"}
-                        </td>
-
-                        <td>
-                            ${registro.fecha}
-                        </td>
-
-                        <td>
-                            ${registro.establecimiento}
-                        </td>
-
-                        <td>
-
-                            ${registro.prenda}
-
-                            ${
-                                registro.material
-
-                                ?
-
-                                `
-                                <br>
-                                <small>
-                                    ${registro.material}
-                                </small>
-                                `
-
-                                :
-
-                                ""
-                            }
-
-                        </td>
-
-                        <td>
-                            ${registro.talla}
-                        </td>
-
-                        <td>
-                            ${registro.cantidad}
-                        </td>
-
-                        <td>
-
-                            ${Number(
-                                registro.perdidaPct
-                                ||
-                                0
-                            ).toFixed(2)}
-                            %
-
-                        </td>
-
-                        <td>
-
-                            ${Number(
-                                registro.aprovechamiento
-                                ||
-                                0
-                            ).toFixed(2)}
-                            %
-
-                        </td>
-
-                        <td>
-
-                            ${Number(
-                                registro.rendimiento
-                                ||
-                                0
-                            ).toFixed(4)}
-
-                        </td>
-
-                        <td>
-
-                            ${
-                                registro.costoPerdida ===
-                                null
-                                ||
-                                registro.costoPerdida ===
-                                undefined
-
-                                ?
-
-                                "Sin precio"
-
-                                :
-
-                                fmtCLP(
-                                    registro.costoPerdida
-                                )
-                            }
-
-                        </td>
-
-                    </tr>
-
-                `
-
-            )
-            .join("")
-
-        :
-
-        `
-
-            <tr>
-
-                <td
-                    colspan="10"
-                    class="empty"
-                >
-                    Sin registros.
-                </td>
-
-            </tr>
-
-        `;
-
-}
+                <table class="lineas">
+                    <thead><tr><th>Material</th><th style="width:140px">Cantidad por prenda</th><th style="width:30px"></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+                <button type="button" class="btn btn-small" data-agregar>+ Agregar material</button>
+                ${PIE_FORM()}
+            </form>`);
+
+        const form = caja.querySelector('form');
+        await this.selectorPrenda(form, ficha?.producto_id, ficha?.talla);
+        const cuerpo = form.querySelector('tbody');
+        const agregar = (materialId = '', cantidad = '') => {
+            const fila = cuerpo.insertRow();
+            fila.innerHTML = `
+                <td><select name="material_id" required>${opciones(materiales, { texto: m => `${m.detalle} (${m.unidad})`, seleccionado: materialId, vacio: 'Elegir...' })}</select></td>
+                <td><input type="number" name="cantidad" min="0.0001" step="any" required value="${esc(cantidad)}"></td>
+                <td><button type="button" class="btn btn-small" data-quitar>×</button></td>`;
+            fila.querySelector('[data-quitar]').addEventListener('click', () => fila.remove());
+        };
+        form.querySelector('[data-agregar]').addEventListener('click', () => agregar());
+        (ficha?.materiales.length ? ficha.materiales : [{}]).forEach(m => agregar(m.material_id, m.cantidad));
+
+        alEnviar(form, async () => {
+            const productoId = num(form.producto_id.value);
+            const talla = form.talla.value;
+            await api.put(`/produccion/fichas/${productoId}/${encodeURIComponent(talla)}`, {
+                ...(ficha || {}),   // conserva peso y medidas si la ficha ya existía
+                materiales: [...cuerpo.rows].map(f => ({
+                    material_id: num(f.querySelector('[name=material_id]').value),
+                    cantidad: num(f.querySelector('[name=cantidad]').value),
+                })),
+            });
+            modal.cerrar();
+            aviso('Ficha guardada.');
+            this.pestana = 'fichas';
+            document.querySelectorAll('#view-produccion .tab').forEach(x => x.classList.toggle('active', x.dataset.tab === 'fichas'));
+            await this.cargar();
+        });
+    },
+};

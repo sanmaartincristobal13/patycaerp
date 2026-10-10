@@ -1,39 +1,11 @@
 // ======================================================
 // PATYCA - LOGIN
 // ======================================================
-
-const usuariosPatyca = [
-
-    {
-        email:
-            "patricia@patyca.cl",
-
-        password:
-            "1234",
-
-        nombre:
-            "Patricia Norambuena",
-
-        rol:
-            "Administradora"
-    },
-
-    {
-        email:
-            "bodega@patyca.cl",
-
-        password:
-            "1234",
-
-        nombre:
-            "Usuario Bodega",
-
-        rol:
-            "Bodega"
-    }
-
-];
-
+//
+// Las credenciales se validan en el backend (POST /api/auth/login).
+// La API devuelve un token que se envía en cada solicitud
+// siguiente como "Authorization: Bearer <token>".
+// ======================================================
 
 const sesionActual =
     sessionStorage.getItem(
@@ -41,7 +13,7 @@ const sesionActual =
     );
 
 
-if (sesionActual) {
+if (sesionActual && location.protocol !== 'file:') {
 
     window.location.href =
         "index.html";
@@ -54,12 +26,16 @@ document
         "loginForm"
     )
     .addEventListener(
-
         "submit",
-
-        function(event) {
+        async function(event) {
 
             event.preventDefault();
+
+
+            const mensaje =
+                document.getElementById(
+                    "loginMsg"
+                );
 
 
             const email =
@@ -80,55 +56,78 @@ document
                     .value;
 
 
-            const usuario =
-                usuariosPatyca.find(
+            mensaje.textContent =
+                "";
 
-                    item =>
-                        item.email === email
-                        &&
-                        item.password ===
-                        password
 
+            try {
+
+                const respuesta =
+                    await fetch(
+                        "/api/auth/login",
+                        {
+                            method:
+                                "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify({
+                                    email,
+                                    password
+                                })
+                        }
+                    );
+
+
+                const datos =
+                    await respuesta.json();
+
+
+                if (!respuesta.ok) {
+
+                    mensaje.textContent =
+                        datos.error
+                        ||
+                        "No se pudo iniciar sesión.";
+
+                    return;
+
+                }
+
+
+                sessionStorage.setItem(
+                    "tokenPatyca",
+                    datos.token
                 );
 
 
-            if (!usuario) {
-
-                document
-                    .getElementById(
-                        "loginMsg"
+                sessionStorage.setItem(
+                    "usuarioPatyca",
+                    JSON.stringify(
+                        datos.usuario
                     )
-                    .textContent =
-                    "Correo o contraseña incorrectos.";
+                );
 
-                return;
+
+                window.location.href =
+                    "index.html";
 
             }
 
+            catch (error) {
 
-            sessionStorage.setItem(
+                console.error(
+                    error
+                );
 
-                "usuarioPatyca",
+                mensaje.textContent =
+                    "No se pudo conectar con el servidor.";
 
-                JSON.stringify({
-
-                    email:
-                        usuario.email,
-
-                    nombre:
-                        usuario.nombre,
-
-                    rol:
-                        usuario.rol
-
-                })
-
-            );
-
-
-            window.location.href =
-                "index.html";
+            }
 
         }
-
     );

@@ -1,0 +1,911 @@
+/* ======================================================
+   PATYCA ERP - COMPLEMENTOS A dashboard.css
+   Solo estilos que la nueva interfaz necesita y no existían.
+====================================================== */
+
+[hidden] {
+    display: none !important;
+}
+
+.head-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ---------- Filtros ---------- */
+
+.filtros {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.filtros input:not([type=checkbox]),
+.filtros select {
+    min-height: 36px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: #ffffff;
+    font: inherit;
+}
+
+.filtros input:not([type=checkbox]) {
+    flex: 1;
+    min-width: 200px;
+}
+
+.check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+}
+
+/* ---------- Pestañas ---------- */
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.tab {
+    padding: 9px 14px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.tab.active {
+    border-bottom-color: var(--gold);
+    color: var(--text);
+}
+
+/* ---------- Tablas ---------- */
+
+td.num,
+th.num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+td.acciones {
+    text-align: right;
+    white-space: nowrap;
+}
+
+td.acciones .btn + .btn {
+    margin-left: 4px;
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.sub {
+    display: block;
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.atrasado {
+    color: var(--red);
+    font-weight: 700;
+}
+
+/* ---------- Formularios en modal ---------- */
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.form-grid .full {
+    grid-column: 1 / -1;
+}
+
+.field input,
+.field select,
+.field textarea {
+    width: 100%;
+}
+
+.lineas {
+    width: 100%;
+    min-width: 0;
+    margin: 6px 0 10px;
+}
+
+.lineas td,
+.lineas th {
+    padding: 6px;
+}
+
+.lineas input,
+.lineas select {
+    width: 100%;
+    min-height: 32px;
+    padding: 4px 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    font: inherit;
+}
+
+.totales {
+    display: grid;
+    gap: 4px;
+    justify-content: end;
+    margin: 8px 0;
+    text-align: right;
+}
+
+.totales strong {
+    font-size: 16px;
+}
+
+.aviso {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--gold-soft);
+    color: #6b5320;
+}
+
+.error-form {
+    min-height: 18px;
+    margin: 6px 0 0;
+    color: var(--red);
+    font-weight: 600;
+}
+
+/* ---------- Avisos flotantes ---------- */
+
+.toast {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 3000;
+    max-width: 380px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: var(--navy);
+    color: #ffffff;
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.toast.visible {
+    opacity: 1;
+    transform: none;
+}
+
+.toast.error {
+    background: var(--red);
+}
+
+@media (max-width: 850px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.view .two-col + .panel {
+    margin-top: 16px;
+}
+
+/* ======================================================
+   VENTAS - MINI POS
+====================================================== */
+
+.pos {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 18px;
+    align-items: start;
+}
+
+#posColegio {
+    min-width: 220px;
+    font-weight: 600;
+}
+
+.pos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px;
+}
+
+.pos-producto {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #ffffff;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+}
+
+.pos-producto:hover {
+    border-color: var(--gold);
+}
+
+.pos-producto.abierto {
+    grid-column: 1 / -1;
+    border-color: var(--gold);
+    cursor: default;
+}
+
+.pos-producto h4 {
+    margin: 0 0 2px;
+    font-size: 13px;
+}
+
+.pos-producto .precio {
+    margin-top: 6px;
+    font-weight: 700;
+}
+
+.pos-tallas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.pos-talla {
+    min-width: 76px;
+    padding: 8px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: var(--surface-2);
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+}
+
+.pos-talla:hover {
+    border-color: var(--gold);
+    background: var(--gold-soft);
+}
+
+.pos-talla strong {
+    display: block;
+    font-size: 15px;
+}
+
+.pos-talla small {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.pos-talla .sin-stock {
+    color: var(--red);
+}
+
+.pos-carrito {
+    position: sticky;
+    top: 90px;
+}
+
+.pos-carrito h3 {
+    margin: 0 0 10px;
+}
+
+.carrito-linea {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.carrito-linea .sub.atrasado {
+    color: var(--red);
+}
+
+.cantidad {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cantidad button,
+.quitar {
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: #ffffff;
+    cursor: pointer;
+}
+
+.quitar {
+    border: 0;
+    color: var(--muted);
+    font-size: 16px;
+}
+
+.carrito-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 12px 0;
+    font-size: 14px;
+}
+
+.carrito-total strong {
+    font-family: "Barlow Condensed", Inter, sans-serif;
+    font-size: 30px;
+}
+
+.pos-carrito .field {
+    margin-bottom: 8px;
+}
+
+.pos-carrito .btn-primary.grande {
+    width: 100%;
+    min-height: 46px;
+    font-size: 15px;
+}
+
+.interruptor {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ======================================================
+   PRODUCCIÓN - CALENDARIO Y ALERTAS
+====================================================== */
+
+.alertas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.alerta {
+    padding: 10px 12px;
+    border-left: 4px solid var(--yellow);
+    border-radius: 8px;
+    background: var(--yellow-bg);
+}
+
+.alerta.atrasada {
+    border-left-color: var(--red);
+    background: var(--red-bg);
+}
+
+.alerta strong {
+    display: block;
+}
+
+.cal-cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.cal-cabecera h3 {
+    margin: 0;
+}
+
+.cal-cabecera h3::first-letter {
+    text-transform: uppercase;
+}
+
+.cal {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--border);
+    gap: 1px;
+}
+
+.cal-nombre {
+    padding: 6px;
+    background: #f8f9fb;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.cal-dia {
+    min-height: 98px;
+    padding: 6px;
+    background: #ffffff;
+}
+
+.cal-dia.fuera {
+    background: var(--surface-2);
+    color: #b4bcc8;
+}
+
+.cal-dia.hoy {
+    box-shadow: inset 0 0 0 2px var(--gold);
+}
+
+.cal-num {
+    margin-bottom: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.cal-orden {
+    display: block;
+    width: 100%;
+    margin-bottom: 3px;
+    padding: 3px 5px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 5px;
+    background: var(--gray-bg);
+    font: inherit;
+    font-size: 10px;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.cal-orden.atrasada { background: var(--red-bg); color: var(--red); }
+.cal-orden.por-vencer { background: var(--yellow-bg); color: var(--yellow); }
+.cal-orden.terminada { background: var(--green-bg); color: var(--green); }
+
+.leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+@media (max-width: 1100px) {
+    .pos {
+        grid-template-columns: 1fr;
+    }
+
+    .pos-carrito {
+        position: static;
+    }
+}
+
+@media (max-width: 700px) {
+    .cal-dia {
+        min-height: 60px;
+        padding: 3px;
+    }
+
+    .cal-orden {
+        font-size: 0;
+        height: 8px;
+        padding: 0;
+    }
+}
+
+.reposicion-cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.reposicion-cabecera .helper-text {
+    flex-basis: 100%;
+    margin: 0;
+}
+
+/* Las tablas dentro de paneles (Inicio, modales) usan el ancho disponible. */
+.panel table,
+.modal table {
+    min-width: 0;
+}
+
+/* ======================================================
+   PROYECCIÓN - SIMULADOR Y GRÁFICO
+   Colores de series: COLOR_SERIE en js/graficos.js (paleta validada).
+====================================================== */
+
+.simulador {
+    margin-bottom: 16px;
+}
+
+.sim-controles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+    align-items: end;
+}
+
+.sim-controles .field {
+    margin: 0;
+}
+
+.sim-controles input,
+.sim-controles select {
+    width: 100%;
+    min-height: 36px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    font: inherit;
+}
+
+.sim-controles .helper-text {
+    margin: 3px 0 0;
+    font-size: 10px;
+}
+
+.leyenda-grafico {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.leyenda-grafico span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.leyenda-grafico i {
+    display: inline-block;
+    width: 18px;
+    height: 0;
+    border-top: 2px solid currentColor;
+}
+
+.leyenda-grafico i.punteada {
+    border-top-style: dashed;
+}
+
+.grafico {
+    position: relative;
+}
+
+.grafico svg {
+    display: block;
+    width: 100%;
+    overflow: visible;
+}
+
+.grafico text {
+    fill: var(--muted);
+    font-size: 10px;
+}
+
+.grafico .etiqueta-final {
+    fill: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.tooltip-grafico {
+    position: absolute;
+    z-index: 5;
+    min-width: 170px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: var(--shadow-lg);
+    font-size: 11px;
+    pointer-events: none;
+}
+
+.tooltip-grafico strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.tooltip-grafico strong::first-letter,
+.proy-mes::first-letter {
+    text-transform: uppercase;
+}
+
+.tooltip-grafico div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.tooltip-grafico i {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 5px;
+    border-radius: 50%;
+}
+
+.proy-mes {
+    display: inline-block;
+}
+
+/* Subselector de tipo de prenda en el POS (control segmentado discreto) */
+.segmentos {
+    display: inline-flex;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.segmentos button {
+    padding: 7px 12px;
+    border: 0;
+    border-right: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.segmentos button:last-child {
+    border-right: 0;
+}
+
+.segmentos button.active {
+    background: var(--navy);
+    color: #ffffff;
+}
+
+.pos-grupo {
+    grid-column: 1 / -1;
+    margin: 8px 0 -2px;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.pos-grupo:first-child {
+    margin-top: 0;
+}
+
+/* ======================================================
+   INICIO
+====================================================== */
+
+.franja {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.franja-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #ffffff;
+    box-shadow: var(--shadow);
+}
+
+.franja-item .lbl {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.franja-item strong {
+    font-family: "Barlow Condensed", Inter, sans-serif;
+    font-size: 28px;
+    line-height: 1.1;
+}
+
+.avance {
+    height: 6px;
+    margin: 4px 0 2px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--gray-bg);
+}
+
+.avance i {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: #2a78d6;
+}
+
+/* Calendario + pendientes en una tarjeta: dos columnas con divisor */
+.agenda {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 0;
+    margin-top: 16px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.agenda-calendario,
+.agenda-pendientes {
+    min-width: 0;
+    padding: 18px 20px;
+}
+
+.agenda-pendientes {
+    border-left: 1px solid var(--border);
+    max-height: 640px;
+    overflow-y: auto;
+}
+
+.agenda-pendientes .panel-title-row {
+    min-height: 34px;
+    margin-bottom: 10px;
+}
+
+.cal.compacto .cal-dia {
+    min-height: 64px;
+}
+
+.lista-alertas {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lista-alertas li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.lista-alertas li:last-child {
+    border-bottom: 0;
+}
+
+.lista-alertas li[data-tipo] {
+    cursor: pointer;
+}
+
+.lista-alertas li[data-tipo]:hover strong {
+    text-decoration: underline;
+}
+
+.lista-alertas .pill {
+    flex: 0 0 auto;
+    min-width: 72px;
+    justify-content: center;
+}
+
+.tooltip-grafico .tooltip-total {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+}
+
+@media (max-width: 1100px) {
+    .agenda {
+        grid-template-columns: 1fr;
+    }
+
+    .agenda-pendientes {
+        max-height: none;
+        border-top: 1px solid var(--border);
+        border-left: 0;
+    }
+}
+
+/* Paginación de tablas */
+.paginacion {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.paginacion select {
+    margin-left: 4px;
+    padding: 3px 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    font: inherit;
+}
+
+.paginacion .btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.chip {
+    padding: 6px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.chip.active {
+    border-color: var(--navy);
+    background: var(--navy);
+    color: #ffffff;
+}
+
+/* Montos rápidos de pago en el POS */
+.pago-rapido {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: -2px 0 6px;
+}
+
+/* Resumen mensual */
+.selector-mes {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.selector-mes input {
+    min-height: 36px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 600;
+}
+
+.selector-mes .btn:disabled {
+    opacity: 0.4;
+}
+
+h4.subtitulo {
+    margin: 14px 0 6px;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+h4.subtitulo:first-child {
+    margin-top: 0;
+}

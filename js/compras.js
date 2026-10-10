@@ -1,2047 +1,273 @@
 // ======================================================
-// PATYCA ERP V6 - COMPRAS + CUENTAS POR PAGAR
+// COMPRAS Y GASTOS
+// ======================================================
+// Registrar una compra suma el stock de los materiales y
+// actualiza su último precio. Los gastos (mano de obra,
+// transporte, etc.) no mueven stock.
 // ======================================================
 
-let proveedorSeleccionado =
-    null;
-
-
-// ======================================================
-// CAMPOS PAGO COMPRA
-// ======================================================
-
-function asegurarCamposPagoCompra() {
-
-    const modal =
-
-        document.getElementById(
-            "modalCompra"
-        );
-
-
-    if (
-        !modal
-        ||
-        document.getElementById(
-            "c_monto_pagado"
-        )
-    ) {
-
-        return;
-
-    }
-
-
-    const selectEstado =
-
-        document.getElementById(
-            "c_estado"
-        );
-
-
-    if (
-        selectEstado
-        &&
-        !Array
-            .from(
-                selectEstado.options
-            )
-            .some(
-
-                option =>
-                    option.value ===
-                    "Parcial"
-
-            )
-    ) {
-
-        const opcion =
-            document.createElement(
-                "option"
-            );
-
-
-        opcion.value =
-            "Parcial";
-
-
-        opcion.textContent =
-            "Parcial";
-
-
-        selectEstado.appendChild(
-            opcion
-        );
-
-    }
-
-
-    const vencimiento =
-
-        document
-            .getElementById(
-                "c_vencimiento"
-            )
-            ?.closest(
-                ".field"
-            );
-
-
-    if (
-        !vencimiento
-    ) {
-
-        return;
-
-    }
-
-
-    const bloque =
-
-        document.createElement(
-            "div"
-        );
-
-
-    bloque.className =
-        "field";
-
-
-    bloque.innerHTML = `
-
-        <label>
-            Monto pagado ahora
-        </label>
-
-        <input
-            id="c_monto_pagado"
-            type="number"
-            min="0"
-            value="0"
-        >
-
-        <small class="helper-text">
-
-            Para compra pendiente
-            puede dejarse en $0.
-
-        </small>
-
-    `;
-
-
-    vencimiento.insertAdjacentElement(
-        "afterend",
-        bloque
-    );
-
-}
-
-
-// ======================================================
-// MODAL ABONO COMPRA
-// ======================================================
-
-function asegurarModalPagoCompra() {
-
-    if (
-        document.getElementById(
-            "modalPagoCompra"
-        )
-    ) {
-
-        return;
-
-    }
-
-
-    const overlay =
-
-        document.createElement(
-            "div"
-        );
-
-
-    overlay.className =
-        "modal-overlay";
-
-
-    overlay.id =
-        "modalPagoCompra";
-
-
-    overlay.innerHTML = `
-
-        <div class="modal">
-
-            <div class="modal-top">
-
-                <h2>
-                    Registrar pago a proveedor
-                </h2>
-
-                <button
-                    class="icon-close"
-                    onclick="
-                    closeModal(
-                        'modalPagoCompra'
-                    )
-                    "
-                >
-                    ×
-                </button>
-
-            </div>
-
-
-            <input
-                id="pc_compra_id"
-                type="hidden"
-            >
-
-
-            <div
-                class="alert-box"
-                id="pc_info"
-            ></div>
-
-
-            <div class="field">
-
-                <label>
-                    Fecha de pago
-                </label>
-
-                <input
-                    id="pc_fecha"
-                    type="date"
-                >
-
-            </div>
-
-
-            <div class="field">
-
-                <label>
-                    Monto pagado
-                </label>
-
-                <input
-                    id="pc_monto"
-                    type="number"
-                    min="1"
-                >
-
-            </div>
-
-
-            <div class="field">
-
-                <label>
-                    Medio de pago
-                </label>
-
-                <select id="pc_medio">
-
-                    <option>
-                        Transferencia
-                    </option>
-
-                    <option>
-                        Efectivo
-                    </option>
-
-                    <option>
-                        Tarjeta
-                    </option>
-
-                    <option>
-                        Otro
-                    </option>
-
-                </select>
-
-            </div>
-
-
-            <div class="field">
-
-                <label>
-                    Observación
-                </label>
-
-                <input id="pc_observacion">
-
-            </div>
-
-
-            <div class="modal-actions">
-
-                <button
-                    class="btn"
-                    onclick="
-                    closeModal(
-                        'modalPagoCompra'
-                    )
-                    "
-                >
-                    Cancelar
-                </button>
-
-                <button
-                    class="btn btn-primary"
-                    onclick="
-                    savePagoCompra()
-                    "
-                >
-                    Registrar pago
-                </button>
-
-            </div>
-
-        </div>
-
-    `;
-
-
-    document.body.appendChild(
-        overlay
-    );
-
-}
-
-
-// ======================================================
-// FILTROS
-// ======================================================
-
-function asegurarFiltrosCompras() {
-
-    const seccion =
-
-        document.getElementById(
-            "view-compras"
-        );
-
-
-    if (
-        !seccion
-        ||
-        document.getElementById(
-            "comprasFiltros"
-        )
-    ) {
-
-        return;
-
-    }
-
-
-    const titulo =
-
-        Array
-            .from(
-                seccion.querySelectorAll(
-                    ".section-title"
-                )
-            )
-            .find(
-
-                item =>
-                    item.textContent
-                        .includes(
-                            "Compras registradas"
-                        )
-
-            );
-
-
-    if (
-        !titulo
-    ) {
-
-        return;
-
-    }
-
-
-    const bloque =
-
-        document.createElement(
-            "div"
-        );
-
-
-    bloque.id =
-        "comprasFiltros";
-
-
-    bloque.className =
-        "panel compact";
-
-
-    bloque.innerHTML = `
-
-        <div class="field-row">
-
-            <div class="field">
-
-                <label>
-                    Buscar
-                </label>
-
-                <input
-                    id="com_filtro_texto"
-                    placeholder="Proveedor, material, factura..."
-                    oninput="renderCompras()"
-                >
-
-            </div>
-
-
-            <div class="field">
-
-                <label>
-                    Estado de pago
-                </label>
-
-                <select
-                    id="com_filtro_estado"
-                    onchange="renderCompras()"
-                >
-
-                    <option value="">
-                        Todos
-                    </option>
-
-                    <option>
-                        Pagada
-                    </option>
-
-                    <option>
-                        Parcial
-                    </option>
-
-                    <option>
-                        Pendiente
-                    </option>
-
-                </select>
-
-            </div>
-
-
-            <div class="field">
-
-                <label>
-                    Mes
-                </label>
-
-                <input
-                    id="com_filtro_mes"
-                    type="month"
-                    oninput="renderCompras()"
-                >
-
-            </div>
-
-        </div>
-
-    `;
-
-
-    titulo.insertAdjacentElement(
-        "afterend",
-        bloque
-    );
-
-}
-
-
-// ======================================================
-// PROVEEDORES
-// ======================================================
-
-function seleccionarProveedor(
-    nombre
-) {
-
-    proveedorSeleccionado =
-        nombre;
-
-    renderCompras();
-
-}
-
-
-function limpiarSeleccionProveedor() {
-
-    proveedorSeleccionado =
-        null;
-
-    renderCompras();
-
-}
-
-
-// ======================================================
-// SELECT PROVEEDORES
-// ======================================================
-
-function cargarSelectProveedores(
-    selectId
-) {
-
-    const select =
-
-        document.getElementById(
-            selectId
-        );
-
-
-    if (
-        !select
-    ) {
-
-        return;
-
-    }
-
-
-    select.innerHTML =
-
-        db.proveedores.map(
-
-            proveedor => `
-
-                <option
-                    value="${proveedor.nombre}"
-                >
-                    ${proveedor.nombre}
-                </option>
-
-            `
-
-        )
-        .join("");
-
-}
-
-
-// ======================================================
-// MATERIAL COMPRA
-// ======================================================
-
-function cargarSelectMaterialCompra() {
-
-    const select =
-
-        document.getElementById(
-            "c_material"
-        );
-
-
-    if (
-        !select
-    ) {
-
-        return;
-
-    }
-
-
-    select.innerHTML =
-
-        db.materiales.map(
-
-            material => `
-
-                <option
-                    value="${material.codigo}"
-                >
-
-                    ${material.codigo}
-                    ·
-                    ${material.detalle}
-
-                </option>
-
-            `
-
-        )
-        .join("");
-
-}
-
-
-// ======================================================
-// ABRIR COMPRA
-// ======================================================
-
-function openCompraModal() {
-
-    asegurarCamposPagoCompra();
-
-    cargarSelectProveedores(
-        "c_proveedor"
-    );
-
-    cargarSelectMaterialCompra();
-
-
-    document
-        .getElementById(
-            "c_fecha"
-        )
-        .value =
-        todayStr();
-
-
-    document
-        .getElementById(
-            "c_cantidad"
-        )
-        .value =
-        "";
-
-
-    document
-        .getElementById(
-            "c_precio"
-        )
-        .value =
-        "";
-
-
-    document
-        .getElementById(
-            "c_documento"
-        )
-        .value =
-        "";
-
-
-    document
-        .getElementById(
-            "c_estado"
-        )
-        .value =
-        "Pendiente";
-
-
-    document
-        .getElementById(
-            "c_vencimiento"
-        )
-        .value =
-        "";
-
-
-    document
-        .getElementById(
-            "c_monto_pagado"
-        )
-        .value =
-        0;
-
-
-    openModal(
-        "modalCompra"
-    );
-
-}
-
-
-// ======================================================
-// GUARDAR COMPRA
-// ======================================================
-
-function saveCompra() {
-
-    const material =
-
-        db.materiales.find(
-
-            item =>
-                item.codigo ===
-                document
-                    .getElementById(
-                        "c_material"
-                    )
-                    .value
-
-        );
-
-
-    if (
-        !material
-    ) {
-
-        alert(
-            "No se encontró el material."
-        );
-
-        return;
-
-    }
-
-
-    const cantidad =
-
-        Number(
-
-            document
-                .getElementById(
-                    "c_cantidad"
-                )
-                .value
-
-        );
-
-
-    const precio =
-
-        Number(
-
-            document
-                .getElementById(
-                    "c_precio"
-                )
-                .value
-
-        );
-
-
-    if (
-        cantidad <= 0
-        ||
-        precio < 0
-    ) {
-
-        alert(
-            "Revisa cantidad y precio."
-        );
-
-        return;
-
-    }
-
-
-    const total =
-        cantidad
-        *
-        precio;
-
-
-    const estadoElegido =
-
-        document
-            .getElementById(
-                "c_estado"
-            )
-            .value;
-
-
-    let pagado =
-
-        Number(
-
-            document
-                .getElementById(
-                    "c_monto_pagado"
-                )
-                .value
-
-            ||
-
-            0
-
-        );
-
-
-    if (
-        estadoElegido ===
-        "Pagada"
-    ) {
-
-        pagado =
-            total;
-
-    }
-
-
-    if (
-        pagado >
-        total
-    ) {
-
-        alert(
-            "El monto pagado no puede superar el total de la compra."
-        );
-
-        return;
-
-    }
-
-
-    const estadoPago =
-
-        calcularEstadoPago(
-
-            total,
-
-            pagado
-
-        );
-
-
-    const stockAnterior =
-
-        material.stock ===
-        null
-
-        ?
-
-        0
-
-        :
-
-        Number(
-            material.stock
-        );
-
-
-    const compra = {
-
-        id:
-            Date.now()
-            +
-            Math.random(),
-
-        codigo:
-
-            nextHumanCode(
-
-                "C",
-
-                db.compras
-
-            ),
-
-        fecha:
-
-            document
-                .getElementById(
-                    "c_fecha"
-                )
-                .value,
-
-        proveedor:
-
-            document
-                .getElementById(
-                    "c_proveedor"
-                )
-                .value,
-
-        materialCodigo:
-            material.codigo,
-
-        material:
-            material.detalle,
-
-        cantidad:
-            cantidad,
-
-        unidad:
-            material.unidad,
-
-        precioUnitario:
-            precio,
-
-        total:
-            total,
-
-        montoPagado:
-            pagado,
-
-        saldoPendiente:
-            total
-            -
-            pagado,
-
-        estadoPago:
-            estadoPago,
-
-        documento:
-
-            document
-                .getElementById(
-                    "c_documento"
-                )
-                .value
-                .trim(),
-
-        vencimiento:
-
-            document
-                .getElementById(
-                    "c_vencimiento"
-                )
-                .value
-
-    };
-
-
-    db.compras.push(
-        compra
-    );
-
-
-    if (
-        pagado > 0
-    ) {
-
-        db.pagosCompras.push({
-
-            id:
-                Date.now()
-                +
-                Math.random(),
-
-            codigo:
-
-                nextHumanCode(
-
-                    "PC",
-
-                    db.pagosCompras
-
-                ),
-
-            compraId:
-                compra.id,
-
-            compraCodigo:
-                compra.codigo,
-
-            fecha:
-                compra.fecha,
-
-            monto:
-                pagado,
-
-            medioPago:
-                "Por definir",
-
-            observacion:
-                "Pago inicial",
-
-            usuario:
-                usuarioActivo.nombre
-
+vistas.compras = {
+
+    pestana: 'compras',
+
+    iniciar() {
+        document.querySelectorAll('#view-compras .tab').forEach(t => t.addEventListener('click', () => {
+            document.querySelectorAll('#view-compras .tab').forEach(x => x.classList.toggle('active', x === t));
+            this.pestana = t.dataset.tab;
+            this.cargar();
+        }));
+        document.getElementById('btnNuevaCompra').addEventListener('click', () => this.formularioCompra());
+        document.getElementById('btnNuevoProveedor').addEventListener('click', () => this.formularioProveedor());
+        document.getElementById('btnNuevoGasto').addEventListener('click', () => this.formularioGasto());
+        // Los gastos requieren el permiso de finanzas.
+        document.getElementById('btnNuevoGasto').hidden = !puede('finanzas');
+        document.getElementById('btnTotalGastos').addEventListener('click', () => this.formularioTotalGastos());
+        document.getElementById('btnTotalGastos').hidden = !puede('finanzas');
+        document.querySelector('#view-compras [data-tab=gastos]').hidden = !puede('finanzas');
+    },
+
+    irAPestana(nombre) {
+        this.pestana = nombre;
+        document.querySelectorAll('#view-compras .tab').forEach(x => x.classList.toggle('active', x.dataset.tab === nombre));
+        return this.cargar();
+    },
+
+    async cargar() {
+        const contenedor = document.getElementById('comprasTabla');
+
+        if (this.pestana === 'proveedores') {
+            const proveedores = await compartido.obtener('proveedores');
+            contenedor.innerHTML = tabla([
+                { titulo: 'Código', valor: p => esc(p.codigo) },
+                { titulo: 'Proveedor', valor: p => `<strong>${esc(p.nombre)}</strong>${p.rut ? `<span class="sub">RUT ${esc(p.rut)}</span>` : ''}` },
+                { titulo: 'Rubro', valor: p => esc(p.categoria) },
+                { titulo: 'Contacto', valor: p => [p.telefono, p.email].filter(Boolean).map(esc).join('<br>') || '—' },
+                { titulo: '', clase: 'acciones', valor: p => `<button class="btn btn-small" data-editar="${p.id}">Editar</button>` },
+            ], proveedores, 'No hay proveedores.');
+            contenedor.querySelectorAll('[data-editar]').forEach(b => b.addEventListener('click', () =>
+                this.formularioProveedor(proveedores.find(p => p.id === num(b.dataset.editar)))));
+            return;
+        }
+
+        if (this.pestana === 'gastos') {
+            const gastos = await api.get('/finanzas/gastos');
+            contenedor.innerHTML = tabla([
+                { titulo: 'Código', valor: g => `<strong>${esc(g.codigo)}</strong><span class="sub">${g.sin_detalle
+                    ? `<span class="proy-mes">${fmtMes(g.fecha, { month: 'long', year: 'numeric' })}</span>` : fmtFecha(g.fecha)}</span>` },
+                { titulo: 'Categoría', valor: g => esc(g.categoria) },
+                { titulo: 'Concepto', valor: g => `${esc(g.concepto)}${g.sin_detalle ? ' <span class="pill pill-gray">Total del mes</span>' : ''}` },
+                { titulo: 'Monto', clase: 'num', valor: g => fmtCLP(g.monto) },
+                { titulo: 'Registró', valor: g => esc(g.usuario) },
+                { titulo: '', clase: 'acciones', valor: g => `<button class="btn btn-small btn-danger" data-borrar-gasto="${g.id}">Eliminar</button>` },
+            ], gastos, 'No hay gastos registrados.');
+            contenedor.querySelectorAll('[data-borrar-gasto]').forEach(b => b.addEventListener('click', () => {
+                if (!confirm('¿Eliminar este gasto?')) return;
+                intentar(async () => {
+                    await api.delete(`/finanzas/gastos/${b.dataset.borrarGasto}`);
+                    await this.cargar();
+                }, 'Gasto eliminado.');
+            }));
+            return;
+        }
+
+        const compras = await api.get('/compras');
+        contenedor.innerHTML = tabla([
+            { titulo: 'Código', valor: c => `<strong>${esc(c.codigo)}</strong><span class="sub">${fmtFecha(c.fecha)}</span>` },
+            { titulo: 'Proveedor', valor: c => `${esc(c.proveedor)}${c.documento ? `<span class="sub">Doc. ${esc(c.documento)}</span>` : ''}` },
+            { titulo: 'Materiales', valor: c => c.items.map(i => `${fmtNumero(i.cantidad)} ${esc(i.unidad)} ${esc(i.material)}`).join('<br>') },
+            { titulo: 'Total', clase: 'num', valor: c => fmtCLP(c.total) },
+            { titulo: 'Saldo', clase: 'num', valor: c => c.saldo_pendiente > 0 ? `<strong>${fmtCLP(c.saldo_pendiente)}</strong>` : '—' },
+            { titulo: 'Pago', valor: c => badge(c.estado_pago) + (c.vencimiento && c.saldo_pendiente > 0
+                ? `<span class="sub ${c.vencimiento < hoy() ? 'atrasado' : ''}">Vence ${fmtFecha(c.vencimiento)}</span>` : '') },
+            { titulo: '', clase: 'acciones', valor: c => c.saldo_pendiente > 0 ? `<button class="btn btn-small" data-pagar="${c.id}">Pagar</button>` : '' },
+        ], compras, 'Aún no hay compras registradas.');
+
+        contenedor.querySelectorAll('[data-pagar]').forEach(b => b.addEventListener('click', () =>
+            this.formularioPago(compras.find(c => c.id === num(b.dataset.pagar)))));
+    },
+
+    // precarga (opcional): { proveedorId, items: [{material_id, cantidad}], alGuardar }
+    // La usa Inventario → Reposición para comprar lo sugerido.
+    async formularioCompra(precarga = {}) {
+        const [proveedores, materiales, { mediosPago }] = await Promise.all([
+            compartido.obtener('proveedores'),
+            compartido.obtener('materiales'),
+            compartido.obtener('catalogos'),
+        ]);
+        const caja = modal.abrir('Nueva compra', `
+            <form>
+                <div class="form-grid">
+                    ${campo('Proveedor', `<select name="proveedor_id" required>${opciones(proveedores, { vacio: 'Elegir...', seleccionado: precarga.proveedorId })}</select>`)}
+                    ${campo('Fecha', `<input type="date" name="fecha" value="${hoy()}" required>`)}
+                    ${campo('N° factura / boleta', '<input name="documento">')}
+                    ${campo('Vence el pago', '<input type="date" name="vencimiento">')}
+                </div>
+                <table class="lineas">
+                    <thead><tr><th>Material</th><th style="width:110px">Cantidad</th><th style="width:120px">Precio unitario</th><th style="width:30px"></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+                <button type="button" class="btn btn-small" data-agregar>+ Agregar material</button>
+                <div class="form-grid" style="margin-top:12px">
+                    ${campo('Pagado ahora', '<input type="number" name="pago" min="0" placeholder="0 = queda pendiente">')}
+                    ${campo('Medio de pago', `<select name="medio_pago_id">${opciones(mediosPago)}</select>`)}
+                </div>
+                <div class="totales"><span>Total</span><strong data-total>$0</strong></div>
+                ${PIE_FORM('Registrar compra')}
+            </form>`, { ancho: true });
+
+        const form = caja.querySelector('form');
+        const cuerpo = form.querySelector('tbody');
+        const recalcular = () => {
+            const total = [...cuerpo.rows].reduce((s, f) =>
+                s + num(f.querySelector('[name=cantidad]').value) * num(f.querySelector('[name=precio]').value), 0);
+            form.querySelector('[data-total]').textContent = fmtCLP(total);
+        };
+        const agregar = (materialId = null, cantidad = '') => {
+            const precio = materiales.find(m => m.id === materialId)?.ultimo_precio ?? '';
+            const fila = cuerpo.insertRow();
+            fila.innerHTML = `
+                <td><select name="material" required>${opciones(materiales, { texto: m => `${m.detalle} (${m.unidad})`, vacio: 'Elegir...', seleccionado: materialId })}</select></td>
+                <td><input type="number" name="cantidad" min="0.001" step="any" required value="${esc(cantidad)}"></td>
+                <td><input type="number" name="precio" min="0" step="any" required value="${esc(precio)}"></td>
+                <td><button type="button" class="btn btn-small" data-quitar>×</button></td>`;
+            // Propone el último precio pagado por ese material.
+            fila.querySelector('select').addEventListener('change', e => {
+                const m = materiales.find(x => x.id === num(e.target.value));
+                fila.querySelector('[name=precio]').value = m?.ultimo_precio || '';
+                recalcular();
+            });
+            fila.addEventListener('input', recalcular);
+            fila.querySelector('[data-quitar]').addEventListener('click', () => {
+                if (cuerpo.rows.length > 1) { fila.remove(); recalcular(); }
+            });
+        };
+        form.querySelector('[data-agregar]').addEventListener('click', () => agregar());
+        if (precarga.items?.length) precarga.items.forEach(i => agregar(i.material_id, i.cantidad));
+        else agregar();
+        recalcular();
+
+        alEnviar(form, async datos => {
+            const compra = await api.post('/compras', {
+                proveedor_id: num(datos.proveedor_id),
+                fecha: datos.fecha,
+                documento: datos.documento,
+                vencimiento: datos.vencimiento || null,
+                items: [...cuerpo.rows].map(f => ({
+                    material_id: num(f.querySelector('[name=material]').value),
+                    cantidad: num(f.querySelector('[name=cantidad]').value),
+                    precio_unitario: num(f.querySelector('[name=precio]').value),
+                })),
+                pago_inicial: num(datos.pago) > 0 ? { monto: num(datos.pago), medio_pago_id: num(datos.medio_pago_id) } : null,
+            });
+            compartido.refrescar('materiales');
+            modal.cerrar();
+            aviso(`Compra ${compra.codigo} registrada. Stock actualizado.`);
+            if (precarga.alGuardar) await precarga.alGuardar();
+            else await this.cargar();
         });
-
-    }
-
-
-    material.stock =
-        stockAnterior
-        +
-        cantidad;
-
-
-    material.ultimoPrecio =
-        precio;
-
-
-    material.proveedor =
-        compra.proveedor;
-
-
-    registrarMovimientoInventario({
-
-        tipo:
-            "Entrada por compra",
-
-        categoria:
-            "Material",
-
-        referencia:
-            compra.codigo,
-
-        itemCodigo:
-            material.codigo,
-
-        itemNombre:
-            material.detalle,
-
-        cantidad:
-            cantidad,
-
-        unidad:
-            material.unidad,
-
-        stockAnterior:
-            stockAnterior,
-
-        stockNuevo:
-            material.stock
-
-    });
-
-
-    registrarActividad(
-
-        "Compras",
-
-        compra.codigo
-        +
-        " · "
-        +
-        material.detalle
-        +
-        " · "
-        +
-        fmtCLP(
-            total
-        )
-        +
-        " · "
-        +
-        estadoPago
-
-    );
-
-
-    persist();
-
-    closeModal(
-        "modalCompra"
-    );
-
-    renderAll();
-
-}
-
-
-// ======================================================
-// ABRIR PAGO COMPRA
-// ======================================================
-
-function abrirPagoCompra(
-    id
-) {
-
-    asegurarModalPagoCompra();
-
-
-    const compra =
-
-        db.compras.find(
-
-            item =>
-                item.id ===
-                id
-
-        );
-
-
-    if (
-        !compra
-    ) {
-
-        return;
-
-    }
-
-
-    if (
-        Number(
-            compra.saldoPendiente
-        )
-        <=
-        0
-    ) {
-
-        alert(
-            "Esta compra ya está totalmente pagada."
-        );
-
-        return;
-
-    }
-
-
-    document
-        .getElementById(
-            "pc_compra_id"
-        )
-        .value =
-        id;
-
-
-    document
-        .getElementById(
-            "pc_fecha"
-        )
-        .value =
-        todayStr();
-
-
-    document
-        .getElementById(
-            "pc_monto"
-        )
-        .value =
-        compra.saldoPendiente;
-
-
-    document
-        .getElementById(
-            "pc_observacion"
-        )
-        .value =
-        "";
-
-
-    document
-        .getElementById(
-            "pc_info"
-        )
-        .innerHTML = `
-
-            <strong>
-                ${compra.codigo}
-            </strong>
-
-            ·
-
-            ${compra.proveedor}
-
-            · Saldo:
-
-            <strong>
-                ${fmtCLP(
-                    compra.saldoPendiente
-                )}
-            </strong>
-
-        `;
-
-
-    openModal(
-        "modalPagoCompra"
-    );
-
-}
-
-
-// ======================================================
-// GUARDAR PAGO COMPRA
-// ======================================================
-
-function savePagoCompra() {
-
-    const id =
-
-        Number(
-
-            document
-                .getElementById(
-                    "pc_compra_id"
-                )
-                .value
-
-        );
-
-
-    const compra =
-
-        db.compras.find(
-
-            item =>
-                Number(
-                    item.id
-                )
-                ===
-                id
-
-        );
-
-
-    if (
-        !compra
-    ) {
-
-        return;
-
-    }
-
-
-    const monto =
-
-        Number(
-
-            document
-                .getElementById(
-                    "pc_monto"
-                )
-                .value
-
-        );
-
-
-    if (
-        monto <= 0
-        ||
-        monto >
-        Number(
-            compra.saldoPendiente
-        )
-    ) {
-
-        alert(
-            "Revisa el monto a pagar."
-        );
-
-        return;
-
-    }
-
-
-    const pago = {
-
-        id:
-            Date.now()
-            +
-            Math.random(),
-
-        codigo:
-
-            nextHumanCode(
-
-                "PC",
-
-                db.pagosCompras
-
-            ),
-
-        compraId:
-            compra.id,
-
-        compraCodigo:
-            compra.codigo,
-
-        fecha:
-
-            document
-                .getElementById(
-                    "pc_fecha"
-                )
-                .value,
-
-        monto:
-            monto,
-
-        medioPago:
-
-            document
-                .getElementById(
-                    "pc_medio"
-                )
-                .value,
-
-        observacion:
-
-            document
-                .getElementById(
-                    "pc_observacion"
-                )
-                .value
-                .trim(),
-
-        usuario:
-            usuarioActivo.nombre
-
-    };
-
-
-    db.pagosCompras.push(
-        pago
-    );
-
-
-    compra.montoPagado =
-
-        Number(
-            compra.montoPagado
-            ||
-            0
-        )
-
-        +
-
-        monto;
-
-
-    compra.saldoPendiente =
-
-        Math.max(
-
-            0,
-
-            Number(
-                compra.total
-            )
-            -
-            compra.montoPagado
-
-        );
-
-
-    compra.estadoPago =
-
-        calcularEstadoPago(
-
-            compra.total,
-
-            compra.montoPagado
-
-        );
-
-
-    registrarActividad(
-
-        "Pagos proveedores",
-
-        pago.codigo
-        +
-        " · "
-        +
-        compra.codigo
-        +
-        " · "
-        +
-        fmtCLP(
-            monto
-        )
-
-    );
-
-
-    persist();
-
-    closeModal(
-        "modalPagoCompra"
-    );
-
-    renderAll();
-
-}
-
-
-// ======================================================
-// COMPATIBILIDAD BOTÓN ANTIGUO
-// ======================================================
-
-function marcarCompraPagada(
-    id
-) {
-
-    abrirPagoCompra(
-        id
-    );
-
-}
-
-
-// ======================================================
-// RENDER
-// ======================================================
-
-function renderCompras() {
-
-    asegurarFiltrosCompras();
-
-
-    const proveedoresGrid =
-
-        document.getElementById(
-            "proveedoresGrid"
-        );
-
-
-    const seleccion =
-
-        document.getElementById(
-            "proveedorSeleccionActual"
-        );
-
-
-    const tablaCompras =
-
-        document.getElementById(
-            "tablaCompras"
-        );
-
-
-    const tablaReferencia =
-
-        document.getElementById(
-            "tablaComprasReferencia"
-        );
-
-
-    const proveedorDetalle =
-
-        document.getElementById(
-            "proveedorDetalle"
-        );
-
-
-    if (
-        !proveedoresGrid
-        ||
-        !tablaCompras
-        ||
-        !tablaReferencia
-    ) {
-
-        return;
-
-    }
-
-
-    proveedoresGrid.innerHTML =
-
-        db.proveedores.map(
-
-            proveedor => `
-
-                <button
-
-                    class="
-                    selector-card
-                    ${
-                        proveedorSeleccionado ===
-                        proveedor.nombre
-
-                        ?
-
-                        "active"
-
-                        :
-
-                        ""
-                    }
-                    "
-
-                    onclick='
-                    seleccionarProveedor(
-                        ${JSON.stringify(
-                            proveedor.nombre
-                        )}
-                    )
-                    '
-
-                    data-searchable
-
-                >
-
-                    <strong>
-                        ${proveedor.nombre}
-                    </strong>
-
-                    <span>
-                        ${proveedor.categoria}
-                    </span>
-
-                </button>
-
-            `
-
-        )
-        .join("");
-
-
-    const texto =
-
-        document
-            .getElementById(
-                "com_filtro_texto"
-            )
-            ?.value
-            .trim()
-            .toLowerCase()
-
-        ||
-
-        "";
-
-
-    const estado =
-
-        document
-            .getElementById(
-                "com_filtro_estado"
-            )
-            ?.value
-
-        ||
-
-        "";
-
-
-    const mes =
-
-        document
-            .getElementById(
-                "com_filtro_mes"
-            )
-            ?.value
-
-        ||
-
-        "";
-
-
-    let compras =
-
-        db.compras.filter(
-
-            compra => {
-
-                const textoCompra =
-
-                    [
-
-                        compra.codigo,
-                        compra.proveedor,
-                        compra.material,
-                        compra.documento
-
-                    ]
-                    .join(
-                        " "
-                    )
-                    .toLowerCase();
-
-
-                return (
-
-                    (
-                        !proveedorSeleccionado
-                        ||
-                        compra.proveedor ===
-                        proveedorSeleccionado
-                    )
-
-                    &&
-
-                    (
-                        !texto
-                        ||
-                        textoCompra.includes(
-                            texto
-                        )
-                    )
-
-                    &&
-
-                    (
-                        !estado
-                        ||
-                        compra.estadoPago ===
-                        estado
-                    )
-
-                    &&
-
-                    (
-                        !mes
-                        ||
-                        String(
-                            compra.fecha
-                        )
-                        .startsWith(
-                            mes
-                        )
-                    )
-
-                );
-
-            }
-
-        );
-
-
-    let referencias =
-
-        db.comprasReferencia.filter(
-
-            item =>
-
-                !proveedorSeleccionado
-
-                ||
-
-                item.proveedor ===
-                proveedorSeleccionado
-
-        );
-
-
-    if (
-        seleccion
-    ) {
-
-        seleccion.innerHTML =
-
-            proveedorSeleccionado
-
-            ?
-
-            `
-
-                <div class="selection-box">
-
-                    <div>
-
-                        <strong>
-                            Proveedor seleccionado
-                        </strong>
-
-                        <span>
-                            ${proveedorSeleccionado}
-                        </span>
-
-                    </div>
-
-                    <button
-                        class="btn"
-                        onclick="
-                        limpiarSeleccionProveedor()
-                        "
-                    >
-                        Ver todos
-                    </button>
-
+    },
+
+    // Gasto de un mes anotado como un solo monto (igual que "Totales sin detalle" de ventas).
+    async formularioTotalGastos() {
+        const { categoriasGasto } = await compartido.obtener('catalogos');
+        const d = new Date();
+        d.setDate(1);
+        d.setMonth(d.getMonth() - 1);
+        const mesPasado = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const otro = categoriasGasto.find(c => c.nombre === 'Otro')?.id;
+
+        const caja = modal.abrir('Total de gastos del mes', `
+            <form>
+                <p class="aviso">Para gastos que solo tiene como <strong>total del mes</strong>.
+                    No incluya aquí gastos que ya registró uno por uno, o se contarán dos veces.</p>
+                <div class="form-grid">
+                    ${campo('Mes', `<input type="month" name="mes" required value="${mesPasado}" max="${hoy().slice(0, 7)}">`)}
+                    ${campo('Monto gastado ($)', '<input type="number" name="monto" min="1" required>')}
+                    ${campo('Categoría', `<select name="categoria_gasto_id">${opciones(categoriasGasto, { seleccionado: otro })}</select>`)}
+                    ${campo('Nota', '<input name="nota" placeholder="Ej: según cuaderno de gastos">')}
                 </div>
+                <p class="helper-text">Puede registrar un total por categoría (varias veces para el mismo mes).</p>
+                ${PIE_FORM()}
+            </form>`);
 
-            `
+        alEnviar(caja.querySelector('form'), async datos => {
+            const nombreMes = fmtMes(`${datos.mes}-01`, { month: 'long', year: 'numeric' });
+            await api.post('/finanzas/gastos', {
+                fecha: `${datos.mes}-01`,
+                categoria_gasto_id: num(datos.categoria_gasto_id),
+                concepto: datos.nota ? `Total de ${nombreMes}: ${datos.nota}` : `Total de gastos de ${nombreMes}`,
+                monto: num(datos.monto),
+                sin_detalle: true,
+            });
+            modal.cerrar();
+            aviso('Total de gastos registrado.');
+            await this.irAPestana('gastos');
+        });
+    },
 
-            :
-
-            `
-
-                <div class="selection-box">
-
-                    <div>
-
-                        <strong>
-                            Vista general
-                        </strong>
-
-                        <span>
-                            Selecciona un proveedor
-                            para ver su historial.
-                        </span>
-
-                    </div>
-
+    async formularioGasto() {
+        const { categoriasGasto } = await compartido.obtener('catalogos');
+        const caja = modal.abrir('Registrar gasto', `
+            <form>
+                <div class="form-grid">
+                    ${campo('Fecha', `<input type="date" name="fecha" value="${hoy()}" required>`)}
+                    ${campo('Categoría', `<select name="categoria_gasto_id" required>${opciones(categoriasGasto)}</select>`)}
+                    ${campo('Concepto', '<input name="concepto" required placeholder="Ej: pago costurera semana 2">', 'full')}
+                    ${campo('Monto', '<input type="number" name="monto" min="1" required>')}
                 </div>
+                ${PIE_FORM()}
+            </form>`);
 
-            `;
+        alEnviar(caja.querySelector('form'), async datos => {
+            await api.post('/finanzas/gastos', { ...datos, monto: num(datos.monto) });
+            modal.cerrar();
+            aviso('Gasto registrado.');
+            await this.irAPestana('gastos');
+        });
+    },
 
-    }
-
-
-    if (
-        proveedorDetalle
-    ) {
-
-        if (
-            proveedorSeleccionado
-        ) {
-
-            const total =
-
-                db.compras
-                    .filter(
-
-                        compra =>
-                            compra.proveedor ===
-                            proveedorSeleccionado
-
-                    )
-                    .reduce(
-
-                        (
-                            suma,
-                            compra
-                        ) =>
-
-                            suma
-                            +
-                            Number(
-                                compra.total
-                            ),
-
-                        0
-
-                    );
-
-
-            const pendiente =
-
-                db.compras
-                    .filter(
-
-                        compra =>
-                            compra.proveedor ===
-                            proveedorSeleccionado
-
-                    )
-                    .reduce(
-
-                        (
-                            suma,
-                            compra
-                        ) =>
-
-                            suma
-                            +
-                            Number(
-                                compra.saldoPendiente
-                                ||
-                                0
-                            ),
-
-                        0
-
-                    );
-
-
-            proveedorDetalle.innerHTML = `
-
-                <div class="
-                    panel
-                    provider-profile
-                ">
-
-                    <div>
-
-                        <span class="eyebrow">
-                            PROVEEDOR
-                        </span>
-
-                        <h2>
-                            ${proveedorSeleccionado}
-                        </h2>
-
-                    </div>
-
-
-                    <div class="detail-kpis">
-
-                        <div>
-
-                            <strong>
-                                ${fmtCLP(
-                                    total
-                                )}
-                            </strong>
-
-                            <span>
-                                Compras registradas
-                            </span>
-
-                        </div>
-
-
-                        <div>
-
-                            <strong>
-                                ${fmtCLP(
-                                    pendiente
-                                )}
-                            </strong>
-
-                            <span>
-                                Saldo por pagar
-                            </span>
-
-                        </div>
-
-                    </div>
-
+    async formularioPago(compra) {
+        const { mediosPago } = await compartido.obtener('catalogos');
+        const caja = modal.abrir(`Pagar ${compra.codigo}`, `
+            <form>
+                <p class="aviso">${esc(compra.proveedor)} · Saldo pendiente <strong>${fmtCLP(compra.saldo_pendiente)}</strong></p>
+                <div class="form-grid">
+                    ${campo('Monto', `<input type="number" name="monto" min="1" max="${compra.saldo_pendiente}" value="${compra.saldo_pendiente}" required>`)}
+                    ${campo('Medio de pago', `<select name="medio_pago_id">${opciones(mediosPago)}</select>`)}
+                    ${campo('Fecha', `<input type="date" name="fecha" value="${hoy()}">`)}
+                    ${campo('Observación', '<input name="observacion">')}
                 </div>
-
-            `;
-
-        }
-
-        else {
-
-            proveedorDetalle.innerHTML =
-                "";
-
-        }
-
-    }
-
-
-    tablaCompras.innerHTML =
-
-        compras.length
-
-        ?
-
-        compras
-            .slice()
-            .reverse()
-            .map(
-
-                compra => `
-
-                    <tr data-searchable>
-
-                        <td>
-                            ${compra.codigo}
-                        </td>
-
-                        <td>
-                            ${compra.fecha}
-                        </td>
-
-                        <td>
-                            ${compra.proveedor}
-                        </td>
-
-                        <td>
-                            ${compra.material}
-                        </td>
-
-                        <td>
-
-                            ${compra.cantidad}
-                            ${compra.unidad}
-
-                        </td>
-
-                        <td>
-
-                            ${fmtCLP(
-                                compra.precioUnitario
-                            )}
-
-                        </td>
-
-                        <td>
-
-                            ${fmtCLP(
-                                compra.total
-                            )}
-
-                        </td>
-
-                        <td>
-
-                            ${
-                                compra.documento
-                                ||
-                                "—"
-                            }
-
-                        </td>
-
-                        <td>
-
-                            <span
-                                class="
-                                pill
-                                ${
-                                    compra.estadoPago ===
-                                    "Pagada"
-
-                                    ?
-
-                                    "pill-green"
-
-                                    :
-
-                                    compra.estadoPago ===
-                                    "Parcial"
-
-                                    ?
-
-                                    "pill-yellow"
-
-                                    :
-
-                                    "pill-red"
-                                }
-                                "
-                            >
-
-                                ${compra.estadoPago}
-
-                            </span>
-
-
-                            <small
-                                style="
-                                display:block;
-                                margin-top:4px;
-                                "
-                            >
-
-                                Pagado:
-                                ${fmtCLP(
-                                    compra.montoPagado
-                                )}
-
-                                <br>
-
-                                Saldo:
-                                ${fmtCLP(
-                                    compra.saldoPendiente
-                                )}
-
-                            </small>
-
-                        </td>
-
-                        <td>
-
-                            ${
-                                Number(
-                                    compra.saldoPendiente
-                                )
-                                > 0
-
-                                ?
-
-                                `
-
-                                <button
-                                    class="
-                                    btn
-                                    btn-small
-                                    btn-primary
-                                    "
-                                    onclick="
-                                    abrirPagoCompra(
-                                        ${compra.id}
-                                    )
-                                    "
-                                >
-                                    Registrar pago
-                                </button>
-
-                                `
-
-                                :
-
-                                "—"
-                            }
-
-                        </td>
-
-                    </tr>
-
-                `
-
-            )
-            .join("")
-
-        :
-
-        `
-
-            <tr>
-
-                <td
-                    colspan="10"
-                    class="empty"
-                >
-
-                    No existen compras
-                    para los filtros seleccionados.
-
-                </td>
-
-            </tr>
-
-        `;
-
-
-    tablaReferencia.innerHTML =
-
-        referencias.length
-
-        ?
-
-        referencias.map(
-
-            compra => `
-
-                <tr data-searchable>
-
-                    <td>
-                        ${compra.proveedor}
-                    </td>
-
-                    <td>
-                        ${compra.material}
-                    </td>
-
-                    <td>
-
-                        ${compra.cantidad}
-                        ${compra.unidad}
-
-                    </td>
-
-                    <td>
-
-                        ${fmtCLP(
-                            compra.precioUnitario
-                        )}
-
-                    </td>
-
-                    <td>
-
-                        ${fmtCLP(
-                            compra.total
-                        )}
-
-                    </td>
-
-                </tr>
-
-            `
-
-        )
-        .join("")
-
-        :
-
-        `
-
-            <tr>
-
-                <td
-                    colspan="5"
-                    class="empty"
-                >
-                    Sin referencias.
-                </td>
-
-            </tr>
-
-        `;
-
-}
+                ${PIE_FORM('Registrar pago')}
+            </form>`);
+
+        alEnviar(caja.querySelector('form'), async datos => {
+            await api.post(`/compras/${compra.id}/pagos`, { ...datos, monto: num(datos.monto), medio_pago_id: num(datos.medio_pago_id) });
+            modal.cerrar();
+            aviso('Pago registrado.');
+            await this.cargar();
+        });
+    },
+
+    formularioProveedor(proveedor = null) {
+        const caja = modal.abrir(proveedor ? `Editar ${proveedor.codigo}` : 'Nuevo proveedor', `
+            <form>
+                <div class="form-grid">
+                    ${campo('Nombre', `<input name="nombre" required value="${esc(proveedor?.nombre)}">`, 'full')}
+                    ${campo('Rubro', `<input name="categoria" value="${esc(proveedor?.categoria)}" placeholder="Ej: Telas">`)}
+                    ${campo('RUT', `<input name="rut" value="${esc(proveedor?.rut)}">`)}
+                    ${campo('Teléfono', `<input name="telefono" value="${esc(proveedor?.telefono)}">`)}
+                    ${campo('Email', `<input type="email" name="email" value="${esc(proveedor?.email)}">`)}
+                </div>
+                ${PIE_FORM()}
+            </form>`);
+
+        alEnviar(caja.querySelector('form'), async datos => {
+            if (proveedor) await api.put(`/proveedores/${proveedor.id}`, datos);
+            else await api.post('/proveedores', datos);
+            compartido.refrescar('proveedores');
+            modal.cerrar();
+            aviso('Proveedor guardado.');
+            await this.irAPestana('proveedores');
+        });
+    },
+};

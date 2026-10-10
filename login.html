@@ -3,13 +3,32 @@
 
 <head>
     <meta charset="UTF-8">
+    <!-- Si se abrió con doble clic (file:///), redirige al servidor -->
+    <script src="js/abrir-local.js"></script>
+    <!-- Si falta la carpeta js/ (por ejemplo, se abrió el archivo desde dentro de un .zip),
+         este aviso explica qué hacer. Va escrito aquí para que funcione sin otros archivos. -->
+    <script>
+        if (!window.PATYCA_ARCHIVOS) {
+            document.addEventListener('DOMContentLoaded', function () {
+                document.body.style.cssText = 'margin:0;background:#f4f6f8;font-family:Arial,sans-serif;color:#172033';
+                document.body.innerHTML =
+                    '<div style="max-width:560px;margin:12vh auto;padding:28px;background:#fff;border:1px solid #e3e7ec;border-radius:14px">' +
+                    '<h1 style="font-size:22px;margin:0 0 10px">Faltan archivos del sistema</h1>' +
+                    '<p style="line-height:1.5;margin:0 0 10px">Esta página se abrió sin sus carpetas <b>css</b> y <b>js</b>. ' +
+                    'Suele pasar al abrirla <b>desde dentro de un archivo .zip</b>.</p>' +
+                    '<p style="line-height:1.5;margin:0">Haga clic derecho en el .zip, elija <b>«Extraer todo…»</b> y, en la carpeta extraída, ' +
+                    'haga doble clic en <b>«Iniciar PATYCA»</b>.</p></div>';
+            });
+        }
+    </script>
 
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1"
     >
 
-    <title>PATYCA - Iniciar sesión</title>
+    <link rel="icon" href="assets/img/favicon.svg">
+<title>PATYCA - Iniciar sesión</title>
 
     <link
         rel="stylesheet"

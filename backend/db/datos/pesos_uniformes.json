@@ -1,0 +1,410 @@
+{
+ "fuente": "Pesos_uniformes_rendimiento_tela.xlsx, hoja \"Polera algodón ML\". Celdas amarillas = estimadas; sin color = pesaje real.",
+ "colegios": [
+  {
+   "establecimiento": "Colegio Pablo Neruda",
+   "tela": "Algodón",
+   "prendas": [
+    {
+     "excel": "Polera",
+     "tipo": "Poleras",
+     "pesos": {
+      "4": {
+       "g": 90,
+       "estimado": false
+      },
+      "6": {
+       "g": 95,
+       "estimado": false
+      },
+      "8": {
+       "g": 125,
+       "estimado": false
+      },
+      "10": {
+       "g": 140,
+       "estimado": false
+      },
+      "12": {
+       "g": 145,
+       "estimado": false
+      },
+      "14": {
+       "g": 145,
+       "estimado": false
+      },
+      "16": {
+       "g": 160,
+       "estimado": false
+      },
+      "S": {
+       "g": 190,
+       "estimado": false
+      },
+      "M": {
+       "g": 210,
+       "estimado": false
+      },
+      "L": {
+       "g": 235,
+       "estimado": false
+      },
+      "XL": {
+       "g": 260,
+       "estimado": false
+      }
+     }
+    },
+    {
+     "excel": "Pantalón",
+     "tipo": "Pantalones y faldas",
+     "pesos": {
+      "4": {
+       "g": 230,
+       "estimado": true
+      },
+      "6": {
+       "g": 260,
+       "estimado": true
+      },
+      "8": {
+       "g": 290,
+       "estimado": false
+      },
+      "10": {
+       "g": 350,
+       "estimado": false
+      },
+      "12": {
+       "g": 390,
+       "estimado": false
+      },
+      "14": {
+       "g": 430,
+       "estimado": false
+      },
+      "16": {
+       "g": 470,
+       "estimado": false
+      },
+      "S": {
+       "g": 500,
+       "estimado": false
+      },
+      "M": {
+       "g": 540,
+       "estimado": false
+      },
+      "L": {
+       "g": 575,
+       "estimado": false
+      },
+      "XL": {
+       "g": 610,
+       "estimado": false
+      }
+     }
+    },
+    {
+     "excel": "Polerón",
+     "tipo": "Polerones y abrigo",
+     "pesos": {
+      "4": {
+       "g": 235,
+       "estimado": true
+      },
+      "6": {
+       "g": 265,
+       "estimado": true
+      },
+      "8": {
+       "g": 295,
+       "estimado": false
+      },
+      "10": {
+       "g": 330,
+       "estimado": false
+      },
+      "12": {
+       "g": 365,
+       "estimado": false
+      },
+      "14": {
+       "g": 400,
+       "estimado": false
+      },
+      "16": {
+       "g": 420,
+       "estimado": false
+      },
+      "S": {
+       "g": 475,
+       "estimado": false
+      },
+      "M": {
+       "g": 500,
+       "estimado": false
+      },
+      "L": {
+       "g": 530,
+       "estimado": false
+      },
+      "XL": {
+       "g": 555,
+       "estimado": false
+      }
+     }
+    },
+    {
+     "excel": "Polar prestina con gorro",
+     "tipo": "Polerones y abrigo",
+     "pesos": {
+      "4": {
+       "g": 430,
+       "estimado": true
+      },
+      "6": {
+       "g": 455,
+       "estimado": true
+      },
+      "8": {
+       "g": 480,
+       "estimado": true
+      },
+      "10": {
+       "g": 520,
+       "estimado": true
+      },
+      "12": {
+       "g": 560,
+       "estimado": true
+      },
+      "14": {
+       "g": 600,
+       "estimado": true
+      },
+      "16": {
+       "g": 640,
+       "estimado": true
+      },
+      "S": {
+       "g": 670,
+       "estimado": true
+      },
+      "M": {
+       "g": 700,
+       "estimado": false
+      },
+      "L": {
+       "g": 740,
+       "estimado": true
+      },
+      "XL": {
+       "g": 780,
+       "estimado": true
+      }
+     }
+    },
+    {
+     "excel": "Polar sin gorro",
+     "tipo": "Polerones y abrigo",
+     "pesos": {
+      "4": {
+       "g": 320,
+       "estimado": true
+      },
+      "6": {
+       "g": 350,
+       "estimado": true
+      },
+      "8": {
+       "g": 380,
+       "estimado": false
+      },
+      "10": {
+       "g": 475,
+       "estimado": false
+      },
+      "12": {
+       "g": 505,
+       "estimado": false
+      },
+      "14": {
+       "g": 555,
+       "estimado": false
+      },
+      "16": {
+       "g": 550,
+       "estimado": false
+      },
+      "S": {
+       "g": 650,
+       "estimado": false
+      },
+      "M": {
+       "g": 670,
+       "estimado": false
+      },
+      "L": {
+       "g": 730,
+       "estimado": false
+      },
+      "XL": {
+       "g": 790,
+       "estimado": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "establecimiento": "Escuela Numpay",
+   "tela": "Fantasía",
+   "nota": "Polera piqué 4 y 6 marcadas con X en la planilla (no se fabrican). Nota original: 320 g piqué mujer.",
+   "prendas": [
+    {
+     "excel": "Polera piqué",
+     "tipo": "Poleras",
+     "pesos": {
+      "8": {
+       "g": 160,
+       "estimado": false
+      },
+      "10": {
+       "g": 170,
+       "estimado": false
+      },
+      "12": {
+       "g": 185,
+       "estimado": false
+      },
+      "14": {
+       "g": 220,
+       "estimado": false
+      },
+      "16": {
+       "g": 250,
+       "estimado": false
+      },
+      "S": {
+       "g": 260,
+       "estimado": false
+      },
+      "M": {
+       "g": 270,
+       "estimado": false
+      },
+      "L": {
+       "g": 325,
+       "estimado": false
+      },
+      "XL": {
+       "g": 340,
+       "estimado": false
+      }
+     }
+    },
+    {
+     "excel": "Pantalón",
+     "tipo": "Pantalones y faldas",
+     "pesos": {
+      "4": {
+       "g": 235,
+       "estimado": true
+      },
+      "6": {
+       "g": 255,
+       "estimado": true
+      },
+      "8": {
+       "g": 275,
+       "estimado": false
+      },
+      "10": {
+       "g": 280,
+       "estimado": false
+      },
+      "12": {
+       "g": 320,
+       "estimado": false
+      },
+      "14": {
+       "g": 355,
+       "estimado": true
+      },
+      "16": {
+       "g": 395,
+       "estimado": false
+      },
+      "S": {
+       "g": 380,
+       "estimado": false
+      },
+      "M": {
+       "g": 420,
+       "estimado": true
+      },
+      "L": {
+       "g": 460,
+       "estimado": false
+      },
+      "XL": {
+       "g": 500,
+       "estimado": true
+      }
+     }
+    },
+    {
+     "excel": "Polerón",
+     "tipo": "Polerones y abrigo",
+     "pesos": {
+      "4": {
+       "g": 245,
+       "estimado": true
+      },
+      "6": {
+       "g": 270,
+       "estimado": false
+      },
+      "8": {
+       "g": 295,
+       "estimado": true
+      },
+      "10": {
+       "g": 325,
+       "estimado": false
+      },
+      "12": {
+       "g": 355,
+       "estimado": false
+      },
+      "14": {
+       "g": 380,
+       "estimado": true
+      },
+      "16": {
+       "g": 400,
+       "estimado": false
+      },
+      "S": {
+       "g": 450,
+       "estimado": false
+      },
+      "M": {
+       "g": 475,
+       "estimado": true
+      },
+      "L": {
+       "g": 505,
+       "estimado": false
+      },
+      "XL": {
+       "g": 540,
+       "estimado": true
+      }
+     }
+    }
+   ]
+  }
+ ]
+}
