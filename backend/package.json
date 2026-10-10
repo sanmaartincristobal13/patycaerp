@@ -11,7 +11,8 @@
     "db:reset": "node --env-file=.env scripts/db.js reset",
     "db:demo": "node --env-file=.env scripts/demo.js",
     "db:pesos": "node --env-file=.env scripts/importar-pesos.js",
-    "portatil": "node scripts/crear-portatil.js"
+    "portatil": "node scripts/crear-portatil.js",
+    "build": "echo sin build"
   },
   "engines": {
     "node": ">=20.6"
