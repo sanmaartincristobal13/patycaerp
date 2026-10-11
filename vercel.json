@@ -7,9 +7,6 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" }
   ],
-  "redirects": [
-    { "source": "/", "destination": "/login", "permanent": false }
-  ],
   "functions": {
     "api/index.js": {
       "includeFiles": "backend/src/**"
