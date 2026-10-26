@@ -71,12 +71,19 @@ vistas.cotizaciones = {
     },
 
     // Crear o editar. Al guardar puede abrir el PDF de inmediato.
+    // Producto: se elige del catálogo ("Polera Polo M/C · Escuela Numpay"), lo que
+    // habilita la talla y propone el precio de lista sin IVA; o se escribe libre
+    // (ej. "Poleras dry-fit" para una institución). También sugiere los productos
+    // libres usados en cotizaciones anteriores.
     async formulario(cot = null) {
-        // Sugerencias de nombre: productos ya usados en cotizaciones anteriores.
-        // No vienen del catálogo: lo que se cotiza a instituciones es otra cosa.
-        const anteriores = await api.get('/cotizaciones');
-        const sugerencias = [...new Set(anteriores.flatMap(c => c.items.map(i => i.descripcion).filter(Boolean)))]
+        const [productos, anteriores] = await Promise.all([compartido.obtener('productos'), api.get('/cotizaciones')]);
+        const etiqueta = p => nombreProducto(p);
+        const porEtiqueta = new Map(productos.map(p => [etiqueta(p), p]));
+        const libres = [...new Set(anteriores.flatMap(c => c.items.filter(i => !i.producto_id).map(i => i.descripcion)))]
+            .filter(s => s && !porEtiqueta.has(s))
             .sort((a, b) => a.localeCompare(b, 'es'));
+        const sugerencias = [...[...porEtiqueta.keys()].sort((a, b) => a.localeCompare(b, 'es')), ...libres];
+        const netoDeLista = precio => Math.round(precio / (1 + IVA_COTIZACION));
 
         const caja = modal.abrir(cot ? `Editar ${cot.codigo}` : 'Nueva cotización', `
             <form>
@@ -87,7 +94,7 @@ vistas.cotizaciones = {
                 <datalist id="cotSugerencias">${sugerencias.map(s => `<option value="${esc(s)}">`).join('')}</datalist>
                 <table class="lineas lineas-cotizacion">
                     <thead><tr>
-                        <th>Producto</th><th style="width:90px">Cantidad</th><th>Característica</th>
+                        <th>Producto (del catálogo o libre)</th><th style="width:80px">Talla</th><th style="width:90px">Cantidad</th><th>Característica</th>
                         <th style="width:120px">P. unitario neto</th><th style="width:110px" class="num">Total</th><th style="width:30px"></th>
                     </tr></thead>
                     <tbody></tbody>
@@ -124,19 +131,51 @@ vistas.cotizaciones = {
             form.querySelector('[data-total]').textContent = fmtCLP(neto + iva);
         };
 
+        // Producto del catálogo que corresponde a lo escrito en la fila (o null si es libre).
+        const productoDe = fila => porEtiqueta.get(valor(fila, 'producto').trim()) || null;
+
+        // Llena las tallas del producto elegido y propone el precio neto de esa talla.
+        const elegirProducto = (fila, tallaElegida = null, conservarPrecio = false) => {
+            const p = productoDe(fila);
+            const select = fila.querySelector('[name=talla]');
+            const tallas = p ? tallasProducto(p) : [];
+            select.innerHTML = p ? tallas.map(t => `<option ${t.talla === tallaElegida ? 'selected' : ''}>${esc(t.talla)}</option>`).join('') : '<option value="">—</option>';
+            select.disabled = !p;
+            select.title = p ? '' : 'Solo para productos del catálogo';
+            if (p && !conservarPrecio) {
+                const t = tallas.find(x => x.talla === select.value);
+                if (t) fila.querySelector('[name=precio]').value = netoDeLista(t.precio);
+            }
+            recalcular();
+        };
+
         const agregar = (item = {}) => {
+            const p = item.producto_id ? productos.find(x => x.id === item.producto_id) : null;
+            const texto = p ? etiqueta(p) : (item.descripcion || item.producto || '');
             const fila = cuerpo.insertRow();
             fila.innerHTML = `
-                <td><input name="producto" ${sugerencias.length ? 'list="cotSugerencias"' : ''} autocomplete="off" required value="${esc(item.producto)}" placeholder="Ej: Polera deportiva"></td>
+                <td><input name="producto" list="cotSugerencias" autocomplete="off" required value="${esc(texto)}" placeholder="Busque en el catálogo o escriba un producto"></td>
+                <td><select name="talla" aria-label="Talla"></select></td>
                 <td><input type="number" name="cantidad" min="1" step="1" required value="${esc(item.cantidad)}"></td>
                 <td><input name="caracteristica" value="${esc(item.caracteristica)}" placeholder="Tela, estampado DTF, logos..."></td>
                 <td><input type="number" name="precio" min="0" step="1" required value="${esc(item.precio_unitario)}"></td>
                 <td class="num" data-total-fila>$0</td>
                 <td><button type="button" class="btn btn-small" data-quitar title="Quitar">×</button></td>`;
             fila.addEventListener('input', recalcular);
+            // Solo si cambió el producto: así no se pierde la talla ya elegida al salir del campo.
+            fila.querySelector('[name=producto]').addEventListener('change', () => {
+                const id = String(productoDe(fila)?.id ?? '');
+                if (id === fila.dataset.productoId) return;
+                fila.dataset.productoId = id;
+                elegirProducto(fila);
+            });
+            fila.querySelector('[name=talla]').addEventListener('change', () => elegirProducto(fila, valor(fila, 'talla')));
             fila.querySelector('[data-quitar]').addEventListener('click', () => {
                 if (cuerpo.rows.length > 1) { fila.remove(); recalcular(); }
             });
+            // Al editar se respeta la talla y el precio guardados.
+            fila.dataset.productoId = String(p?.id ?? '');
+            elegirProducto(fila, item.talla, true);
         };
 
         form.querySelector('[data-agregar]').addEventListener('click', () => {
@@ -156,12 +195,19 @@ vistas.cotizaciones = {
                 fecha: datos.fecha,
                 observacion: datos.observacion,
                 descuento: 0,
-                items: [...cuerpo.rows].map(f => ({
-                    descripcion: valor(f, 'producto'),
-                    caracteristica: valor(f, 'caracteristica'),
-                    cantidad: num(valor(f, 'cantidad')),
-                    precio_unitario: num(valor(f, 'precio')),
-                })),
+                // Del catálogo: va vinculado (producto + talla) y el PDF muestra "Nombre T10".
+                // Libre: va solo el texto escrito.
+                items: [...cuerpo.rows].map(f => {
+                    const p = productoDe(f);
+                    return {
+                        producto_id: p?.id ?? null,
+                        talla: p ? valor(f, 'talla') : null,
+                        descripcion: p ? '' : valor(f, 'producto'),
+                        caracteristica: valor(f, 'caracteristica'),
+                        cantidad: num(valor(f, 'cantidad')),
+                        precio_unitario: num(valor(f, 'precio')),
+                    };
+                }),
             };
             const guardada = cot
                 ? await api.put(`/cotizaciones/${cot.id}`, cuerpoPeticion)
