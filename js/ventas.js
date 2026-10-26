@@ -39,6 +39,12 @@ vistas.ventas = {
         document.getElementById('ventasHistorial').hidden = this.pestana !== 'historial';
         document.getElementById('ventasTotales').hidden = this.pestana !== 'totales';
         document.getElementById('ventasPorMes').hidden = this.pestana !== 'mes';
+        document.getElementById('ventasResumen').hidden = this.pestana !== 'resumen';
+
+        if (this.pestana === 'resumen') {
+            await resumenVentas.cargar();
+            return;
+        }
 
         if (this.pestana === 'mes') {
             await this.dibujarPorMes();

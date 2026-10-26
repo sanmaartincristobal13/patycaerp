@@ -10,32 +10,32 @@
 //   5. Cierre, firma (imagen) y nombre del responsable.
 // ======================================================
 
+// Carga jsPDF y su plugin de tablas la primera vez que se pide un PDF
+// (también lo usa el resumen de ventas).
+const cargarJsPdf = (() => {
+    let cargando = null;
+    const cargarScript = src => new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('No se pudo cargar el generador de PDF.'));
+        document.head.appendChild(s);
+    });
+    // jsPDF primero; el plugin de tablas se engancha a él.
+    return () => {
+        cargando ??= cargarScript('js/vendor/jspdf.umd.min.js')
+            .then(() => cargarScript('js/vendor/jspdf.plugin.autotable.min.js'))
+            .catch(e => { cargando = null; throw e; });
+        return cargando;
+    };
+})();
+
 const cotizacionPdf = (() => {
 
     const NAVY = [22, 32, 51];
     const GOLD = [198, 155, 71];
     const GRIS = [102, 112, 133];
     const FONDO = [247, 240, 226];
-
-    let cargando = null;
-
-    function cargarScript(src) {
-        return new Promise((resolve, reject) => {
-            const s = document.createElement('script');
-            s.src = src;
-            s.onload = resolve;
-            s.onerror = () => reject(new Error('No se pudo cargar el generador de PDF.'));
-            document.head.appendChild(s);
-        });
-    }
-
-    // jsPDF primero; el plugin de tablas se engancha a él.
-    function cargarLibreria() {
-        cargando ??= cargarScript('js/vendor/jspdf.umd.min.js')
-            .then(() => cargarScript('js/vendor/jspdf.plugin.autotable.min.js'))
-            .catch(e => { cargando = null; throw e; });
-        return cargando;
-    }
 
     // $1.234.567 (sin decimales, formato chileno)
     const pesos = n => fmtCLP(n);
@@ -254,7 +254,7 @@ const cotizacionPdf = (() => {
     return {
         // Muestra la vista previa del PDF con un botón para descargarlo.
         async abrir(cotizacionId) {
-            await cargarLibreria();
+            await cargarJsPdf();
             const [cot, config] = await Promise.all([
                 api.get(`/cotizaciones/${cotizacionId}`),
                 api.get('/configuracion'),

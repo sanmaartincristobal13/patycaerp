@@ -127,6 +127,7 @@
             </div>
             <div class="tabs">
                 <button class="tab active" data-tab="vender">Vender</button>
+                <button class="tab" data-tab="resumen">Resumen día / mes</button>
                 <button class="tab" data-tab="historial">Ventas y encargos</button>
                 <button class="tab" data-tab="mes">Por mes</button>
                 <button class="tab" data-tab="totales">Totales sin detalle</button>
@@ -142,6 +143,26 @@
                     <div class="pos-grid" id="posProductos"></div>
                 </div>
                 <aside class="pos-carrito panel" id="posCarrito"></aside>
+            </div>
+
+            <div id="ventasResumen" hidden>
+                <div class="filtros barra-resumen">
+                    <div class="segmentos" id="resVentasModo" role="group" aria-label="Período">
+                        <button type="button" class="active" data-modo="dia">Día</button>
+                        <button type="button" data-modo="mes">Mes</button>
+                    </div>
+                    <div class="selector-mes">
+                        <button class="btn" data-res-paso="-1" aria-label="Anterior">‹</button>
+                        <input type="date" id="resVentasFecha" aria-label="Día">
+                        <input type="month" id="resVentasMes" aria-label="Mes" hidden>
+                        <button class="btn" data-res-paso="1" aria-label="Siguiente">›</button>
+                    </div>
+                    <div class="barra-resumen-acciones">
+                        <button class="btn" id="resVentasCsv">Exportar a Excel (CSV)</button>
+                        <button class="btn" id="resVentasPdf">Descargar PDF</button>
+                    </div>
+                </div>
+                <div id="resVentasContenido"></div>
             </div>
 
             <div id="ventasHistorial" hidden>
@@ -405,6 +426,7 @@
 <script src="js/graficos.js"></script>
 <script src="js/inicio.js"></script>
 <script src="js/ventas.js"></script>
+<script src="js/resumen-ventas.js"></script>
 <script src="js/cotizacion-pdf.js"></script>
 <script src="js/cotizaciones.js"></script>
 <script src="js/catalogo.js"></script>
