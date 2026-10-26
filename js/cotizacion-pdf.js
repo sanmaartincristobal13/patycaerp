@@ -109,18 +109,16 @@ const cotizacionPdf = (() => {
             ['Teléfonos', config.emisor_telefonos],
             ['Correo', config.emisor_correo],
         ].filter(([, valor]) => valor);
-        // Dos columnas para que el encabezado no ocupe media hoja.
-        const mitad = Math.ceil(datosEmisor.length / 2);
-        datosEmisor.forEach(([etiqueta, valor], i) => {
-            const columna = i < mitad ? 0 : 1;
-            const fila = i < mitad ? i : i - mitad;
-            const x = m + columna * (util / 2);
+        // Un dato por línea; si es largo (giro, dirección) sigue en la línea de abajo.
+        datosEmisor.forEach(([etiqueta, valor]) => {
             doc.setFont('helvetica', 'bold');
-            doc.text(`${etiqueta}:`, x, y + fila * 4.8);
+            doc.text(`${etiqueta}:`, m, y);
             doc.setFont('helvetica', 'normal');
-            doc.text(doc.splitTextToSize(valor, util / 2 - 22)[0], x + 19, y + fila * 4.8);
+            const lineas = doc.splitTextToSize(valor, util - 20);
+            doc.text(lineas, m + 19, y);
+            y += lineas.length * 4.6;
         });
-        y += mitad * 4.8 + 4;
+        y += 4;
 
         // ---------- 2. Cliente receptor ----------
         doc.setFillColor(...FONDO);
