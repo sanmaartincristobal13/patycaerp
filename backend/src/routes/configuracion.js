@@ -18,12 +18,26 @@ router.get('/configuracion', async (req, res) => {
     res.json(rows[0]);
 });
 
+// Firma para el PDF de cotizaciones: imagen PNG o JPG como data URL, o vacío para quitarla.
+function leerFirma(valor) {
+    if (!valor) return '';
+    if (typeof valor !== 'string' || !/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(valor)) {
+        throw solicitudInvalida('La firma debe ser una imagen PNG o JPG.');
+    }
+    if (valor.length > 700000) throw solicitudInvalida('La imagen de la firma es muy pesada (máximo 500 KB).');
+    return valor;
+}
+
 router.put('/configuracion', soloAdmin, async (req, res) => {
     const b = req.body;
+    const opcional = (valor, campo) => v.texto(valor, campo, { requerido: false });
     const { rows } = await query(
         `UPDATE configuracion SET
             empresa = $1, taller = $2, porcentaje_advertencia_stock = $3,
-            dias_aviso_vencimiento = $4, saldo_inicial = $5, fecha_saldo_inicial = $6
+            dias_aviso_vencimiento = $4, saldo_inicial = $5, fecha_saldo_inicial = $6,
+            emisor_nombre = $7, emisor_rut = $8, emisor_giro = $9, emisor_direccion = $10,
+            emisor_telefonos = $11, emisor_correo = $12, cotizacion_lema = $13,
+            cotizacion_cierre = $14, firma_nombre = $15, firma_imagen = $16
          WHERE id = 1 RETURNING *`,
         [
             v.texto(b.empresa, 'empresa'),
@@ -32,6 +46,16 @@ router.put('/configuracion', soloAdmin, async (req, res) => {
             v.numero(b.dias_aviso_vencimiento, 'dias_aviso_vencimiento', { min: 0, entero: true }),
             v.numero(b.saldo_inicial, 'saldo_inicial'),
             v.fecha(b.fecha_saldo_inicial, 'fecha_saldo_inicial'),
+            v.texto(b.emisor_nombre, 'nombre del emisor'),
+            opcional(b.emisor_rut, 'RUT'),
+            opcional(b.emisor_giro, 'giro'),
+            opcional(b.emisor_direccion, 'dirección'),
+            opcional(b.emisor_telefonos, 'teléfonos'),
+            opcional(b.emisor_correo, 'correo'),
+            opcional(b.cotizacion_lema, 'lema'),
+            opcional(b.cotizacion_cierre, 'texto de cierre'),
+            opcional(b.firma_nombre, 'nombre de la firma'),
+            leerFirma(b.firma_imagen),
         ]
     );
     res.json(rows[0]);

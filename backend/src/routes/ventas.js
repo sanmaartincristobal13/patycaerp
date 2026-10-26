@@ -273,25 +273,43 @@ router.patch('/:id/entregar', async (req, res) => {
     res.json(venta);
 });
 
+// Anula una venta: devuelve al stock lo entregado o reservado y la borra con sus pagos.
+async function anularVenta(client, usuarioId, id) {
+    const venta = await obtenerVenta(client, id);
+    const entregada = venta.estado_entrega === 'Entregada';
+    for (const item of venta.items) {
+        const devolver = entregada ? item.cantidad : item.reservada;
+        if (devolver <= 0) continue;
+        await moverStockPrenda(client, {
+            productoId: item.producto_id, talla: item.talla, delta: devolver,
+            tipo: entregada ? 'Reverso de venta' : 'Liberación de reserva',
+            referencia: venta.codigo, usuarioId,
+        });
+    }
+    await client.query('DELETE FROM ventas WHERE id = $1', [id]);
+    await registrarActividad(client, usuarioId, 'Ventas', 'Eliminar', `Venta ${venta.codigo} anulada`, venta.codigo);
+}
+
+// DELETE /api/ventas/mes/:mes  (AAAA-MM) -> anula todas las ventas registradas ese mes.
+// No toca la historia importada ni los totales sin detalle.
+router.delete('/mes/:mes', async (req, res) => {
+    const mes = req.params.mes;
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) throw solicitudInvalida('Mes inválido. Use el formato AAAA-MM.');
+    const eliminadas = await transaccion(async client => {
+        const { rows } = await client.query(
+            `SELECT id FROM ventas WHERE date_trunc('month', fecha) = $1::date ORDER BY id FOR UPDATE`,
+            [`${mes}-01`]
+        );
+        for (const { id } of rows) await anularVenta(client, req.usuario.id, id);
+        return rows.length;
+    });
+    res.json({ eliminadas });
+});
+
 // DELETE /api/ventas/:id -> anula la venta y devuelve al stock lo entregado o reservado
 router.delete('/:id', async (req, res) => {
     const id = v.id(req.params.id);
-    await transaccion(async client => {
-        const venta = await obtenerVenta(client, id);
-        const entregada = venta.estado_entrega === 'Entregada';
-        for (const item of venta.items) {
-            const devolver = entregada ? item.cantidad : item.reservada;
-            if (devolver <= 0) continue;
-            await moverStockPrenda(client, {
-                productoId: item.producto_id, talla: item.talla, delta: devolver,
-                tipo: entregada ? 'Reverso de venta' : 'Liberación de reserva',
-                referencia: venta.codigo, usuarioId: req.usuario.id,
-            });
-        }
-        await client.query('DELETE FROM ventas WHERE id = $1', [id]);
-        await registrarActividad(client, req.usuario.id, 'Ventas', 'Eliminar',
-            `Venta ${venta.codigo} anulada`, venta.codigo);
-    });
+    await transaccion(client => anularVenta(client, req.usuario.id, id));
     res.status(204).end();
 });
 

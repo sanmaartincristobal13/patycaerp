@@ -909,3 +909,63 @@ h4.subtitulo {
 h4.subtitulo:first-child {
     margin-top: 0;
 }
+
+/* ---------- Cotizaciones ---------- */
+
+.pdf-vista {
+    width: 100%;
+    height: min(72vh, 900px);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+}
+
+.select-estado {
+    min-height: 30px;
+    padding: 2px 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    font: inherit;
+    font-size: 13px;
+    background: var(--surface);
+}
+
+.lineas-cotizacion td.num {
+    white-space: nowrap;
+    text-align: right;
+    font-weight: 600;
+}
+
+.totales-cotizacion span {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    min-width: 220px;
+}
+
+.firma-config {
+    display: flex;
+    align-items: center;
+    min-height: 70px;
+    margin-bottom: 8px;
+    padding: 8px;
+    border: 1px dashed var(--border-strong);
+    border-radius: 8px;
+    background: var(--surface-2);
+}
+
+.firma-config img {
+    max-width: 220px;
+    max-height: 90px;
+}
+
+/* En celular la tabla de ítems se desliza de lado en vez de apretarse. */
+@media (max-width: 720px) {
+    .lineas-cotizacion {
+        display: block;
+        overflow-x: auto;
+    }
+    .lineas-cotizacion input {
+        min-width: 90px;
+    }
+}

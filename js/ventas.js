@@ -88,9 +88,21 @@ vistas.ventas = {
             ...(haySinDetalle ? [{ titulo: 'Totales sin detalle', clase: 'num', valor: m => m.sin_detalle ? fmtCLP(m.sin_detalle) : '—' }] : []),
             { titulo: 'Prendas', clase: 'num', valor: m => fmtNumero(m.prendas) },
             { titulo: 'Total del mes', clase: 'num', valor: m => `<strong>${fmtCLP(m.total)}</strong>` },
-            { titulo: '', clase: 'acciones', valor: m => m.total ? `<button class="btn btn-small" data-mes="${m.mes.slice(0, 7)}">Ver detalle</button>` : '' },
+            { titulo: '', clase: 'acciones', valor: m => (m.total ? `<button class="btn btn-small" data-mes="${m.mes.slice(0, 7)}">Ver detalle</button>` : '')
+                + (m.cantidad_ventas ? ` <button class="btn btn-small btn-danger" data-borrar-mes="${m.mes.slice(0, 7)}" data-cantidad="${m.cantidad_ventas}">Eliminar ventas</button>` : '') },
         ], meses, 'Sin ventas.', { porPagina: 12 });
         contenedor.querySelectorAll('[data-mes]').forEach(b => b.addEventListener('click', () => this.detalleMes(b.dataset.mes)));
+        contenedor.querySelectorAll('[data-borrar-mes]').forEach(b => b.addEventListener('click', () => {
+            const mes = b.dataset.borrarMes;
+            const nombre = fmtMes(`${mes}-01`, { month: 'long', year: 'numeric' });
+            if (!confirm(`¿Eliminar las ${b.dataset.cantidad} ventas registradas en ${nombre}?\n\n`
+                + 'Las prendas vuelven al stock y se borran sus pagos. La historia importada y los totales sin detalle no se tocan.')) return;
+            intentar(async () => {
+                const { eliminadas } = await api.delete(`/ventas/mes/${mes}`);
+                aviso(`${eliminadas} ventas de ${nombre} eliminadas.`);
+                await this.dibujarPorMes();
+            });
+        }));
     },
 
     // Desglose de un mes: por colegio, por tipo de prenda y productos más vendidos.
@@ -486,11 +498,27 @@ vistas.ventas = {
             { titulo: 'Saldo', clase: 'num', valor: v => v.saldo_pendiente > 0 ? `<strong>${fmtCLP(v.saldo_pendiente)}</strong>` : '—' },
             { titulo: 'Pago', valor: v => badge(v.estado_pago) },
             { titulo: 'Entrega', valor: v => this.estadoEntrega(v) },
-            { titulo: '', clase: 'acciones', valor: v => `<button class="btn btn-small" data-ver="${v.id}">Ver</button>` },
+            { titulo: '', clase: 'acciones', valor: v => `<button class="btn btn-small" data-ver="${v.id}">Ver</button>
+                <button class="btn btn-small btn-danger" data-eliminar="${v.id}">Eliminar</button>` },
         ], filas, 'No hay ventas con estos filtros.');
 
         document.querySelectorAll('#ventasTabla [data-ver]').forEach(b =>
             b.addEventListener('click', () => this.detalle(Number(b.dataset.ver))));
+        document.querySelectorAll('#ventasTabla [data-eliminar]').forEach(b =>
+            b.addEventListener('click', () => this.anular(this.lista.find(v => v.id === Number(b.dataset.eliminar)))));
+    },
+
+    // Anula una venta (desde el historial o su detalle): el stock vuelve y se borran sus pagos.
+    anular(v) {
+        const msg = v.estado_entrega === 'Entregada'
+            ? `¿Anular ${v.codigo}? Las prendas vuelven al stock y se borran sus pagos.`
+            : `¿Anular el encargo ${v.codigo}? Lo reservado vuelve al stock y se borran sus abonos.`;
+        if (!confirm(msg)) return;
+        intentar(async () => {
+            await api.delete(`/ventas/${v.id}`);
+            if (document.getElementById('modal').classList.contains('open')) modal.cerrar();
+            if (vistaVisible('ventas')) await this.cargar();
+        }, `${v.codigo} anulada.`);
     },
 
     // "Entregada" / "Listo para retirar" / "Por entregar · En taller" / "Por entregar · Falta enviar al taller"
@@ -586,17 +614,7 @@ vistas.ventas = {
             if (vistaVisible('ventas')) await this.cargar();
         }, 'Encargo entregado. Stock descontado.'));
 
-        caja.querySelector('[data-anular]').addEventListener('click', () => {
-            const msg = v.estado_entrega === 'Entregada'
-                ? `¿Anular ${v.codigo}? Las prendas vuelven al stock y se borran sus pagos.`
-                : `¿Anular el encargo ${v.codigo}? Lo reservado vuelve al stock y se borran sus abonos.`;
-            if (!confirm(msg)) return;
-            intentar(async () => {
-                await api.delete(`/ventas/${id}`);
-                modal.cerrar();
-                if (vistaVisible('ventas')) await this.cargar();
-            }, `${v.codigo} anulada.`);
-        });
+        caja.querySelector('[data-anular]').addEventListener('click', () => this.anular(v));
 
         caja.querySelectorAll('[data-taller]').forEach(b => b.addEventListener('click', () => {
             const [productoId, talla, cantidad] = b.dataset.taller.split('|');

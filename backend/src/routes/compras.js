@@ -1,7 +1,7 @@
 // Compras de materiales y pagos a proveedores.
 const { Router } = require('express');
 const { query, transaccion } = require('../db');
-const { noEncontrado, solicitudInvalida } = require('../lib/errores');
+const { noEncontrado, solicitudInvalida, HttpError } = require('../lib/errores');
 const { moverStockMaterial, registrarActividad } = require('../lib/registro');
 const v = require('../lib/validar');
 
@@ -159,6 +159,29 @@ router.post('/:id/pagos', async (req, res) => {
         return obtenerCompra(client, id);
     });
     res.status(201).json(compra);
+});
+
+// DELETE /api/compras/:id -> descuenta del stock los materiales que entraron
+// y borra la compra con sus pagos. No se puede si el material ya se usó.
+router.delete('/:id', async (req, res) => {
+    const id = v.id(req.params.id);
+    await transaccion(async client => {
+        const compra = await obtenerCompra(client, id);
+        for (const item of compra.items) {
+            try {
+                await moverStockMaterial(client, {
+                    materialId: item.material_id, delta: -Number(item.cantidad),
+                    tipo: 'Ajuste manual', referencia: compra.codigo, usuarioId: req.usuario.id,
+                });
+            } catch (error) {
+                if (error.status !== 409) throw error;
+                throw new HttpError(409, `No se puede eliminar ${compra.codigo}: parte del material ya se usó. ${error.message}`);
+            }
+        }
+        await client.query('DELETE FROM compras WHERE id = $1', [id]);
+        await registrarActividad(client, req.usuario.id, 'Compras', 'Eliminar', `Compra ${compra.codigo} eliminada`, compra.codigo);
+    });
+    res.status(204).end();
 });
 
 module.exports = router;

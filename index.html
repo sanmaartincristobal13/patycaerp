@@ -49,6 +49,7 @@
         <nav class="nav" id="nav">
             <button class="nav-main" data-view="inicio" data-modulo="dashboard"><span class="nav-icon">▦</span><span>Inicio</span></button>
             <button class="nav-main" data-view="ventas" data-modulo="ventas"><span class="nav-icon">$</span><span>Ventas</span></button>
+            <button class="nav-main" data-view="cotizaciones" data-modulo="cotizaciones"><span class="nav-icon">❏</span><span>Cotizaciones</span></button>
             <button class="nav-main" data-view="catalogo" data-modulo="catalogo"><span class="nav-icon">◫</span><span>Catálogo</span></button>
             <button class="nav-main" data-view="inventario" data-modulo="inventario"><span class="nav-icon">▤</span><span>Inventario</span></button>
             <button class="nav-main" data-view="produccion" data-modulo="produccion"><span class="nav-icon">✂</span><span>Producción</span></button>
@@ -173,6 +174,30 @@
                 <div class="filtros"><button class="btn btn-primary" id="btnNuevoTotal">+ Registrar total del mes</button></div>
                 <div class="table-wrap" id="ventasTotalesTabla"></div>
             </div>
+        </section>
+
+        <!-- ================= COTIZACIONES ================= -->
+        <section id="view-cotizaciones" class="view" hidden>
+            <div class="page-head">
+                <div>
+                    <h1 class="page-title">Cotizaciones</h1>
+                    <p class="page-desc">Arme la cotización para un colegio, institución o empresa y descárguela en PDF. Los precios se ingresan netos; el IVA se calcula solo.</p>
+                </div>
+                <div class="head-actions">
+                    <button class="btn btn-primary" id="btnNuevaCotizacion">+ Nueva cotización</button>
+                </div>
+            </div>
+            <div class="filtros">
+                <select id="cotFiltroEstado" aria-label="Estado">
+                    <option value="">Todos los estados</option>
+                    <option>Borrador</option>
+                    <option>Enviada</option>
+                    <option>Aceptada</option>
+                    <option>Rechazada</option>
+                </select>
+                <input id="cotBuscar" placeholder="Buscar por cliente o código...">
+            </div>
+            <div class="table-wrap" id="cotizacionesTabla"></div>
         </section>
 
         <!-- ================= CATÁLOGO ================= -->
@@ -358,6 +383,10 @@
                     </div>
                     <div id="configUsuarios"></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-title-row"><h3>Datos para cotizaciones (PDF)</h3></div>
+                    <form id="formCotizacionConfig"></form>
+                </div>
             </div>
         </section>
 
@@ -376,6 +405,8 @@
 <script src="js/graficos.js"></script>
 <script src="js/inicio.js"></script>
 <script src="js/ventas.js"></script>
+<script src="js/cotizacion-pdf.js"></script>
+<script src="js/cotizaciones.js"></script>
 <script src="js/catalogo.js"></script>
 <script src="js/inventario.js"></script>
 <script src="js/produccion.js"></script>

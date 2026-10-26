@@ -58,7 +58,18 @@ CREATE TABLE configuracion (
     dias_aviso_vencimiento        integer  NOT NULL DEFAULT 5  CHECK (dias_aviso_vencimiento >= 0),
     saldo_inicial                 numeric(12,0) NOT NULL DEFAULT 0,
     fecha_saldo_inicial           date,
-    moneda                        text     NOT NULL DEFAULT 'CLP'
+    moneda                        text     NOT NULL DEFAULT 'CLP',
+    -- Datos del emisor y textos del PDF de cotizaciones
+    emisor_nombre                 text     NOT NULL DEFAULT 'PATRICIA ISABEL NORAMBUENA NORAMBUENA',
+    emisor_rut                    text     NOT NULL DEFAULT '',
+    emisor_giro                   text     NOT NULL DEFAULT '',
+    emisor_direccion              text     NOT NULL DEFAULT '',
+    emisor_telefonos              text     NOT NULL DEFAULT '',
+    emisor_correo                 text     NOT NULL DEFAULT '',
+    cotizacion_lema               text     NOT NULL DEFAULT 'Somos una empresa familiar de confecciones de Uniformes Escolares e Institucionales.',
+    cotizacion_cierre             text     NOT NULL DEFAULT 'Agradecemos su preferencia y quedamos atentos a cualquier consulta.',
+    firma_nombre                  text     NOT NULL DEFAULT 'PATRICIA NORAMBUENA',
+    firma_imagen                  text     NOT NULL DEFAULT ''    -- PNG/JPG en base64 (data URL)
 );
 
 CREATE TABLE bodegas (
@@ -206,14 +217,20 @@ CREATE TABLE cotizaciones (
     creado_en         timestamptz NOT NULL DEFAULT now()
 );
 
+-- Un ítem es un producto del catálogo (producto_id + talla) o texto libre
+-- (descripcion), por ejemplo "Polera deportiva" para una institución.
+-- precio_unitario es NETO: el IVA se agrega en v_cotizaciones.
 CREATE TABLE cotizacion_items (
     id               integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     cotizacion_id    integer NOT NULL REFERENCES cotizaciones(id) ON DELETE CASCADE,
-    producto_id      integer NOT NULL,
-    talla            text    NOT NULL,
+    producto_id      integer,
+    talla            text,
+    descripcion      text    NOT NULL DEFAULT '',
+    caracteristica   text    NOT NULL DEFAULT '',    -- tela, estampado DTF, logos...
     cantidad         integer NOT NULL CHECK (cantidad > 0),
     precio_unitario  numeric(12,0) NOT NULL CHECK (precio_unitario >= 0),
-    FOREIGN KEY (producto_id, talla) REFERENCES producto_tallas(producto_id, talla)
+    FOREIGN KEY (producto_id, talla) REFERENCES producto_tallas(producto_id, talla),
+    CONSTRAINT cotizacion_items_producto_o_descripcion CHECK (producto_id IS NOT NULL OR descripcion <> '')
 );
 
 
@@ -551,11 +568,21 @@ JOIN tipos_tela t ON t.id = p.tipo_tela_id
 JOIN producto_tallas pt ON pt.producto_id = f.producto_id AND pt.talla = f.talla
 WHERE f.peso_unitario_g > 0;
 
+-- Los precios de la cotización son NETOS: TOTAL = NETO + IVA 19 %.
 CREATE VIEW v_cotizaciones AS
+WITH sumas AS (
+    SELECT c.id,
+           coalesce(sum(i.cantidad * i.precio_unitario), 0) AS subtotal
+    FROM cotizaciones c
+    LEFT JOIN cotizacion_items i ON i.cotizacion_id = c.id
+    GROUP BY c.id
+)
 SELECT
     c.*,
-    coalesce(sum(i.cantidad * i.precio_unitario), 0)                         AS subtotal,
-    greatest(coalesce(sum(i.cantidad * i.precio_unitario), 0) - c.descuento, 0) AS total
+    s.subtotal,
+    greatest(s.subtotal - c.descuento, 0)                                   AS neto,
+    round(greatest(s.subtotal - c.descuento, 0) * 0.19)                     AS iva,
+    greatest(s.subtotal - c.descuento, 0)
+        + round(greatest(s.subtotal - c.descuento, 0) * 0.19)               AS total
 FROM cotizaciones c
-LEFT JOIN cotizacion_items i ON i.cotizacion_id = c.id
-GROUP BY c.id;
+JOIN sumas s ON s.id = c.id;

@@ -1,4 +1,7 @@
 // Cotizaciones y su conversión a venta.
+// Los precios de una cotización son NETOS; v_cotizaciones calcula neto, IVA y total.
+// Un ítem puede ser un producto del catálogo (producto_id + talla) o texto libre
+// (descripcion + caracteristica), por ejemplo para instituciones o empresas.
 const { Router } = require('express');
 const { query, transaccion } = require('../db');
 const { noEncontrado, solicitudInvalida, HttpError } = require('../lib/errores');
@@ -9,19 +12,22 @@ const v = require('../lib/validar');
 const router = Router();
 
 const ESTADOS = ['Borrador', 'Enviada', 'Aceptada', 'Rechazada'];
+const IVA = 0.19;
 
 const SELECT_COTIZACION = `
     SELECT c.*, u.nombre AS usuario,
            coalesce((SELECT json_agg(codigo ORDER BY id) FROM ventas WHERE cotizacion_id = c.id), '[]') AS ventas_generadas,
            coalesce((
                SELECT json_agg(json_build_object(
-                   'id', i.id, 'producto_id', i.producto_id, 'producto', p.nombre,
+                   'id', i.id, 'producto_id', i.producto_id,
+                   'producto', coalesce(nullif(i.descripcion, ''), p.nombre || ' T' || i.talla),
+                   'descripcion', i.descripcion, 'caracteristica', i.caracteristica,
                    'establecimiento', e.nombre, 'talla', i.talla, 'cantidad', i.cantidad,
                    'precio_unitario', i.precio_unitario, 'total', i.cantidad * i.precio_unitario
                ) ORDER BY i.id)
                FROM cotizacion_items i
-               JOIN productos p ON p.id = i.producto_id
-               JOIN establecimientos e ON e.id = p.establecimiento_id
+               LEFT JOIN productos p ON p.id = i.producto_id
+               LEFT JOIN establecimientos e ON e.id = p.establecimiento_id
                WHERE i.cotizacion_id = c.id
            ), '[]') AS items
     FROM v_cotizaciones c
@@ -61,24 +67,38 @@ function leerCotizacion(b) {
         referencia: v.texto(b.referencia, 'referencia'),
         descuento: v.numero(b.descuento, 'descuento', { requerido: false, min: 0, entero: true }) ?? 0,
         observacion: v.texto(b.observacion, 'observacion', { requerido: false }),
-        items: v.lista(b.items, 'items').map(i => ({
-            producto_id: v.id(i.producto_id, 'producto_id'),
-            talla: v.texto(String(i.talla ?? ''), 'talla'),
-            cantidad: v.numero(i.cantidad, 'cantidad', { min: 1, entero: true }),
-            precio_unitario: v.numero(i.precio_unitario, 'precio_unitario', { requerido: false, min: 0, entero: true }),
-        })),
+        items: v.lista(b.items, 'items').map(i => {
+            const delCatalogo = i.producto_id !== undefined && i.producto_id !== null && i.producto_id !== '';
+            return {
+                producto_id: delCatalogo ? v.id(i.producto_id, 'producto_id') : null,
+                talla: delCatalogo ? v.texto(String(i.talla ?? ''), 'talla') : null,
+                descripcion: v.texto(i.descripcion, 'producto', { requerido: !delCatalogo }),
+                caracteristica: v.texto(i.caracteristica, 'caracteristica', { requerido: false }),
+                cantidad: v.numero(i.cantidad, 'cantidad', { min: 1, entero: true }),
+                // Ítem libre: el precio es obligatorio. Del catálogo: si falta, se calcula desde la lista.
+                precio_unitario: v.numero(i.precio_unitario, 'precio unitario', { requerido: !delCatalogo, min: 0, entero: true }),
+            };
+        }),
     };
 }
 
 async function guardarItems(client, cotizacionId, items) {
     await client.query('DELETE FROM cotizacion_items WHERE cotizacion_id = $1', [cotizacionId]);
     for (const i of items) {
-        // Sin precio indicado se usa el de la lista de precios.
+        if (i.producto_id === null) {
+            await client.query(
+                `INSERT INTO cotizacion_items (cotizacion_id, descripcion, caracteristica, cantidad, precio_unitario)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [cotizacionId, i.descripcion, i.caracteristica, i.cantidad, i.precio_unitario]
+            );
+            continue;
+        }
+        // Sin precio indicado se usa el de la lista (que incluye IVA) llevado a neto.
         const { rowCount } = await client.query(
-            `INSERT INTO cotizacion_items (cotizacion_id, producto_id, talla, cantidad, precio_unitario)
-             SELECT $1, producto_id, talla, $4, coalesce($5, precio)
+            `INSERT INTO cotizacion_items (cotizacion_id, producto_id, talla, descripcion, caracteristica, cantidad, precio_unitario)
+             SELECT $1, producto_id, talla, $4, $5, $6, coalesce($7, round(precio / (1 + $8::numeric)))
              FROM producto_tallas WHERE producto_id = $2 AND talla = $3`,
-            [cotizacionId, i.producto_id, i.talla, i.cantidad, i.precio_unitario]
+            [cotizacionId, i.producto_id, i.talla, i.descripcion, i.caracteristica, i.cantidad, i.precio_unitario, IVA]
         );
         if (!rowCount) throw solicitudInvalida(`El producto ${i.producto_id} no tiene la talla ${i.talla}.`);
     }
@@ -151,12 +171,17 @@ router.post('/:id/venta', async (req, res) => {
         if (cot.estado !== 'Aceptada') {
             throw new HttpError(409, 'Solo una cotización Aceptada puede convertirse en venta.');
         }
+        if (cot.items.some(i => !i.producto_id)) {
+            throw new HttpError(409, 'Solo se pueden convertir en venta cotizaciones con productos del catálogo (con talla). Registre la venta desde Ventas.');
+        }
         const pago = req.body?.pago_inicial;
+        // La venta guarda precios con IVA incluido; la cotización, netos.
+        const bruto = n => Math.round(Number(n) * (1 + IVA));
         const ventaId = await crearVenta(client, req.usuario.id, {
             fecha: null,
-            descuento: cot.descuento,
+            descuento: bruto(cot.descuento),
             observacion: `Generada desde ${cot.codigo}`,
-            items: cot.items,
+            items: cot.items.map(i => ({ ...i, precio_unitario: bruto(i.precio_unitario) })),
             cotizacionId: id,
             pagoInicial: pago?.monto
                 ? { monto: v.numero(pago.monto, 'monto', { min: 1, entero: true }), medio_pago_id: v.id(pago.medio_pago_id, 'medio_pago_id') }

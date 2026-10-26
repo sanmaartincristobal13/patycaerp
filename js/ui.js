@@ -72,6 +72,8 @@ function badge(texto) {
         'Crítico': 'pill-red', 'Atrasada': 'pill-red',
         'Comprar': 'pill-yellow', 'Por vencer': 'pill-yellow',
         'Cubierto': 'pill-green', 'OK': 'pill-green', 'A tiempo': 'pill-green',
+        // Cotizaciones
+        'Aceptada': 'pill-green', 'Enviada': 'pill-yellow', 'Rechazada': 'pill-red',
     }[texto] || 'pill-gray';
     return `<span class="pill ${clase}">${esc(texto)}</span>`;
 }

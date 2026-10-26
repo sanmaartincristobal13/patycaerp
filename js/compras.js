@@ -79,11 +79,21 @@ vistas.compras = {
             { titulo: 'Saldo', clase: 'num', valor: c => c.saldo_pendiente > 0 ? `<strong>${fmtCLP(c.saldo_pendiente)}</strong>` : '—' },
             { titulo: 'Pago', valor: c => badge(c.estado_pago) + (c.vencimiento && c.saldo_pendiente > 0
                 ? `<span class="sub ${c.vencimiento < hoy() ? 'atrasado' : ''}">Vence ${fmtFecha(c.vencimiento)}</span>` : '') },
-            { titulo: '', clase: 'acciones', valor: c => c.saldo_pendiente > 0 ? `<button class="btn btn-small" data-pagar="${c.id}">Pagar</button>` : '' },
+            { titulo: '', clase: 'acciones', valor: c => (c.saldo_pendiente > 0 ? `<button class="btn btn-small" data-pagar="${c.id}">Pagar</button> ` : '')
+                + `<button class="btn btn-small btn-danger" data-borrar-compra="${c.id}">Eliminar</button>` },
         ], compras, 'Aún no hay compras registradas.');
 
         contenedor.querySelectorAll('[data-pagar]').forEach(b => b.addEventListener('click', () =>
             this.formularioPago(compras.find(c => c.id === num(b.dataset.pagar)))));
+        contenedor.querySelectorAll('[data-borrar-compra]').forEach(b => b.addEventListener('click', () => {
+            const c = compras.find(x => x.id === num(b.dataset.borrarCompra));
+            if (!confirm(`¿Eliminar la compra ${c.codigo}? Los materiales se descuentan del stock y se borran sus pagos.`)) return;
+            intentar(async () => {
+                await api.delete(`/compras/${c.id}`);
+                compartido.refrescar('materiales');
+                await this.cargar();
+            }, `Compra ${c.codigo} eliminada.`);
+        }));
     },
 
     // precarga (opcional): { proveedorId, items: [{material_id, cantidad}], alGuardar }

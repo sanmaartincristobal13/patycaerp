@@ -33,6 +33,8 @@ Requisitos: Node.js 20.6 o superior y PostgreSQL 14 o superior.
 
 `npm run db:demo` (con el servidor corriendo) carga datos de **prueba**: conteos de stock, compras, ventas, encargos, órdenes y gastos de las últimas semanas, más un usuario `bodega@patyca.cl` / `bodega1234`. Incluye 24 meses de historia para la proyección (solo la historia: `npm run db:demo -- --solo-historia`) y productos con **precio de prueba** para los colegios sin lista de precios (`--solo-catalogo`). Los clientes y ventas son inventados: no usarlo en la base real.
 
+**Datos de prueba por SQL (Inicio, Producción y Proyección):** `db/demo-inicio-produccion.sql` se pega en el SQL Editor de Supabase (o `psql "$DATABASE_URL" -f db/demo-inicio-produccion.sql`). Carga ventas del mes, encargos, órdenes de producción, compras, gastos y 24 meses de historia por producto y talla para la proyección (solo si `ventas_historicas` está vacía), con fechas relativas al día en que se ejecuta. Todo queda marcado `[DEMO]` y se elimina con `db/demo-borrar.sql`. Para borrar solo las ventas de prueba (y su historia), dejando órdenes, compras y gastos: `db/borrar-ventas-simuladas.sql`.
+
 ## Estructura
 
 ```
@@ -69,6 +71,7 @@ backend/
 - **Producción**: Pendiente → En proceso → Terminada. Cada orden tiene fecha de entrega (si viene de un encargo, hereda la fecha de retiro). Se marca "Atrasada" o "Por vencer" según los días de aviso de Configuración. Al terminar, las prendas entran al stock y, si existe ficha de materiales, se descuentan los materiales.
 - **Reposición** (`/inventario/reposicion`): sugiere cuánto comprar de cada material = stock objetivo (o mínimo) + lo que piden las órdenes abiertas según su ficha − stock actual. No compra nada por sí sola.
 - **Compra**: suma stock de materiales y actualiza su último precio. Lo no pagado queda por pagar.
+- **Cotizaciones** (menú Cotizaciones): ítems de texto libre (producto, cantidad, característica y precio unitario **neto**) para colegios, instituciones o empresas. `v_cotizaciones` calcula NETO, IVA 19 % y TOTAL. El PDF se arma en el navegador con jsPDF (`js/vendor/`, sin depender de internet) con encabezado, datos del emisor, SEÑORES, detalle, totales, cierre y firma; esos datos se editan en Configuración → Datos para cotizaciones. Bases creadas antes de este módulo: ejecutar `db/migracion-cotizaciones.sql` (no borra datos y se puede repetir).
 
 - **Proyección** (`/proyeccion`): usa ~2 años de historia (`ventas_historicas` + ventas del sistema). Crecimiento = últimos 12 meses vs 12 anteriores; nivel de cada mes = promedio de los dos años (el reciente pesa el doble); proyección = nivel × (1 + crecimiento), valorizada a precio de lista actual. El simulador del front ajusta crecimiento, precios y demanda, y sugiere cuánto fabricar por talla (venta proyectada − stock − órdenes en curso).
 - **Costo y rendimiento de tela** (vista `v_rendimiento_tela`, `GET /produccion/rendimiento-tela`): con el peso de la prenda por talla (marcado real o estimado) y los parámetros del tipo de tela (Algodón / Fantasía: precio por kg, peso del rollo, merma), igual que la planilla de PATYCA: consumo = peso × (1 + merma), costo = consumo × precio/kg, prendas por rollo y % del precio de venta. Cada orden muestra la tela que necesita y la proyección, los rollos a comprar.
