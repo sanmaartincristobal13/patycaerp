@@ -28,10 +28,10 @@ vistas.catalogo = {
 
     dibujar() {
         const est = num(document.getElementById('catalogoFiltroEst').value);
-        const texto = document.getElementById('catalogoBuscar').value.trim().toLowerCase();
+        const texto = document.getElementById('catalogoBuscar').value;
         const filas = this.productos.filter(p =>
             (!est || p.establecimiento_id === est) &&
-            (!texto || `${p.nombre} ${p.establecimiento} ${p.codigo}`.toLowerCase().includes(texto)));
+            coincideBusqueda(texto, p.nombre, p.establecimiento, p.codigo));
 
         document.getElementById('catalogoTabla').innerHTML = tabla([
             { titulo: 'Código', valor: p => esc(p.codigo) },

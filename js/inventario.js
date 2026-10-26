@@ -35,9 +35,9 @@ vistas.inventario = {
     },
 
     dibujar() {
-        const texto = document.getElementById('inventarioBuscar').value.trim().toLowerCase();
+        const texto = document.getElementById('inventarioBuscar').value;
         const soloConteo = document.getElementById('inventarioSoloConteo').checked;
-        const coincide = s => !texto || s.toLowerCase().includes(texto);
+        const coincide = s => coincideBusqueda(texto, s);
         const estadoStock = (stock, minimo) => stock === null ? '<span class="pill pill-gray">Sin conteo</span>'
             : minimo !== null && stock <= minimo ? '<span class="pill pill-red">Bajo mínimo</span>'
             : '<span class="pill pill-green">OK</span>';

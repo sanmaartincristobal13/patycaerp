@@ -26,8 +26,8 @@ vistas.cotizaciones = {
     },
 
     dibujar() {
-        const texto = document.getElementById('cotBuscar').value.trim().toLowerCase();
-        const filas = this.lista.filter(c => !texto || `${c.codigo} ${c.referencia}`.toLowerCase().includes(texto));
+        const texto = document.getElementById('cotBuscar').value;
+        const filas = this.lista.filter(c => coincideBusqueda(texto, c.codigo, c.referencia, ...c.items.map(i => i.producto)));
         const resumenItems = c => {
             const primeros = c.items.slice(0, 2).map(i => `${fmtNumero(i.cantidad)} × ${esc(i.producto)}`).join('<br>');
             return c.items.length > 2 ? `${primeros}<span class="sub">y ${c.items.length - 2} más</span>` : primeros;

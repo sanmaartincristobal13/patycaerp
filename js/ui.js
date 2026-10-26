@@ -60,6 +60,23 @@ function esc(valor) {
     }[c]));
 }
 
+// ---------- Búsqueda ----------
+
+// "Polerón  Niño" -> "poleron nino": sin tildes, minúsculas y espacios simples.
+function normalizar(texto) {
+    return String(texto ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// ¿Los campos contienen lo buscado? Ignora tildes y mayúsculas, y cada palabra
+// puede estar en cualquier parte: "poleron numpay" encuentra "Escuela Numpay · Polerón de Buzo".
+function coincideBusqueda(busqueda, ...campos) {
+    const palabras = normalizar(busqueda).split(' ').filter(Boolean);
+    if (!palabras.length) return true;
+    const texto = normalizar(campos.join(' '));
+    return palabras.every(p => texto.includes(p));
+}
+
 // ---------- Componentes ----------
 
 // Insignia de estado. Reutiliza las clases de color de dashboard.css.

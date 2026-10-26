@@ -208,12 +208,12 @@ vistas.ventas = {
     },
 
     dibujarProductos() {
-        const texto = document.getElementById('posBuscar').value.trim().toLowerCase();
+        const texto = document.getElementById('posBuscar').value;
         const delColegio = this.productos.filter(p => !this.establecimiento || p.establecimiento_id === this.establecimiento);
         this.dibujarTipos(delColegio);
         const filas = delColegio.filter(p =>
             (this.tipo === null || p.tipo_prenda_id === this.tipo) &&
-            (!texto || `${p.nombre} ${p.establecimiento}`.toLowerCase().includes(texto)));
+            coincideBusqueda(texto, p.nombre, p.establecimiento));
 
         const contenedor = document.getElementById('posProductos');
         if (!delColegio.length) {
@@ -423,9 +423,8 @@ vistas.ventas = {
     // ---------- Historial ----------
 
     dibujarHistorial() {
-        const texto = document.getElementById('ventasBuscar').value.trim().toLowerCase();
-        const filas = this.lista.filter(v =>
-            !texto || `${v.codigo} ${v.cliente_nombre} ${v.cliente_telefono}`.toLowerCase().includes(texto));
+        const texto = document.getElementById('ventasBuscar').value;
+        const filas = this.lista.filter(v => coincideBusqueda(texto, v.codigo, v.cliente_nombre, v.cliente_telefono));
 
         document.getElementById('ventasTabla').innerHTML = tabla([
             { titulo: 'Código', valor: v => `<strong>${esc(v.codigo)}</strong><span class="sub">${fmtFecha(v.fecha)}</span>` },
