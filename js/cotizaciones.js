@@ -72,9 +72,11 @@ vistas.cotizaciones = {
 
     // Crear o editar. Al guardar puede abrir el PDF de inmediato.
     async formulario(cot = null) {
-        const productos = await compartido.obtener('productos');
-        // Sugerencias de nombre: las prendas del catálogo (sin repetir).
-        const sugerencias = [...new Set(productos.map(p => p.nombre))].sort();
+        // Sugerencias de nombre: productos ya usados en cotizaciones anteriores.
+        // No vienen del catálogo: lo que se cotiza a instituciones es otra cosa.
+        const anteriores = await api.get('/cotizaciones');
+        const sugerencias = [...new Set(anteriores.flatMap(c => c.items.map(i => i.descripcion).filter(Boolean)))]
+            .sort((a, b) => a.localeCompare(b, 'es'));
 
         const caja = modal.abrir(cot ? `Editar ${cot.codigo}` : 'Nueva cotización', `
             <form>
@@ -125,7 +127,7 @@ vistas.cotizaciones = {
         const agregar = (item = {}) => {
             const fila = cuerpo.insertRow();
             fila.innerHTML = `
-                <td><input name="producto" list="cotSugerencias" required value="${esc(item.producto)}" placeholder="Ej: Polera deportiva"></td>
+                <td><input name="producto" ${sugerencias.length ? 'list="cotSugerencias"' : ''} autocomplete="off" required value="${esc(item.producto)}" placeholder="Ej: Polera deportiva"></td>
                 <td><input type="number" name="cantidad" min="1" step="1" required value="${esc(item.cantidad)}"></td>
                 <td><input name="caracteristica" value="${esc(item.caracteristica)}" placeholder="Tela, estampado DTF, logos..."></td>
                 <td><input type="number" name="precio" min="0" step="1" required value="${esc(item.precio_unitario)}"></td>
