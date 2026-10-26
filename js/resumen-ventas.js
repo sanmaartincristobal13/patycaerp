@@ -2,8 +2,9 @@
 // VENTAS → RESUMEN DÍA / MES (métricas de gestión)
 // ======================================================
 // Día: cuánto entró a caja, cuántas ventas y por qué medio de pago.
-// Mes: ingresos brutos y netos, recaudado, producto más vendido y
-//      prendas confeccionadas vs vendidas.
+// Mes: ingresos brutos y netos, recaudado, producto más vendido,
+//      prendas confeccionadas vs vendidas, desglose por colegio y tipo,
+//      y la lista de meses (para comparar, abrir o eliminar sus ventas).
 // Ambos se exportan a Excel (CSV) o PDF para respaldo contable.
 //   Recaudado = pagos recibidos (incluye abonos y saldos de días anteriores).
 //   Vendido   = ventas registradas, cobradas o no. Montos con IVA.
@@ -67,6 +68,7 @@ const resumenVentas = {
         inputMes.hidden = esDia;
         inputDia.value = this.fecha;
         inputMes.value = this.mes;
+        document.querySelectorAll('#resVentasModo [data-modo]').forEach(b => b.classList.toggle('active', b.dataset.modo === this.modo));
         document.querySelector('#ventasResumen [data-res-paso="1"]').disabled =
             esDia ? this.fecha >= hoy() : this.mes >= hoy().slice(0, 7);
 
@@ -74,8 +76,13 @@ const resumenVentas = {
             this.datos = await api.get(`/reportes/dia/${this.fecha}`);
             this.dibujarDia(this.datos);
         } else {
-            this.datos = await api.get(`/reportes/gestion-mes/${this.mes}`);
-            this.dibujarMes(this.datos);
+            const [gestion, detalle, meses] = await Promise.all([
+                api.get(`/reportes/gestion-mes/${this.mes}`),
+                api.get(`/reportes/ventas-mes/${this.mes}`),
+                api.get('/reportes/ventas-mes'),
+            ]);
+            this.datos = { ...gestion, colegios: detalle.colegios, tipos: detalle.tipos };
+            this.dibujarMes(this.datos, meses);
         }
     },
 
@@ -127,8 +134,10 @@ const resumenVentas = {
             </div>`;
     },
 
-    dibujarMes(r) {
+    dibujarMes(r, meses) {
         const nombreMes = fmtMes(r.mes, { month: 'long', year: 'numeric' });
+        const pct = monto => r.bruto ? `${Math.round(monto / r.bruto * 100)}%` : '—';
+        const barra = monto => `<div class="avance"><i style="width:${r.bruto ? Math.round(monto / r.bruto * 100) : 0}%"></i></div>`;
         const origen = [
             r.ventas_historia ? `historia ${fmtCLP(r.ventas_historia)}` : '',
             r.ventas_sin_detalle ? `sin detalle ${fmtCLP(r.ventas_sin_detalle)}` : '',
@@ -173,6 +182,26 @@ const resumenVentas = {
                     ], r.productos, 'Sin prendas vendidas ni confeccionadas este mes.')}
                 </div>
             </div>
+            <div class="two-col" style="margin-top:16px">
+                <div class="panel">
+                    <div class="panel-title-row"><h3>Por colegio</h3></div>
+                    ${tabla([
+                        { titulo: 'Colegio', valor: c => `${esc(c.nombre)}${barra(c.total)}` },
+                        { titulo: 'Prendas', clase: 'num', valor: c => c.prendas ? fmtNumero(c.prendas) : '—' },
+                        { titulo: 'Monto', clase: 'num', valor: c => `<strong>${fmtCLP(c.total)}</strong>${c.sin_detalle ? `<span class="sub">${fmtCLP(c.sin_detalle)} sin detalle</span>` : ''}` },
+                        { titulo: '%', clase: 'num', valor: c => pct(c.total) },
+                    ], r.colegios, 'Sin ventas este mes.', { porPagina: 0 })}
+                </div>
+                <div class="panel">
+                    <div class="panel-title-row"><h3>Por tipo de prenda</h3></div>
+                    ${tabla([
+                        { titulo: 'Tipo', valor: t => esc(t.nombre) },
+                        { titulo: 'Prendas', clase: 'num', valor: t => t.prendas === null ? '—' : fmtNumero(t.prendas) },
+                        { titulo: 'Monto', clase: 'num', valor: t => fmtCLP(t.monto) },
+                        { titulo: '%', clase: 'num', valor: t => pct(t.monto) },
+                    ], r.tipos, 'Sin datos.', { porPagina: 0 })}
+                </div>
+            </div>
             <div class="panel" style="margin-top:16px">
                 <div class="panel-title-row"><h3>Día a día</h3></div>
                 ${tabla([
@@ -182,12 +211,44 @@ const resumenVentas = {
                     { titulo: 'Recaudado', clase: 'num', valor: x => `<strong>${fmtCLP(x.recaudado)}</strong>` },
                     { titulo: '', clase: 'acciones', valor: x => `<button class="btn btn-small" data-ver-dia="${x.fecha}">Ver día</button>` },
                 ], r.por_dia, 'Sin movimientos registrados día a día este mes.', { porPagina: 31 })}
+            </div>
+            <div class="panel" style="margin-top:16px">
+                <div class="panel-title-row"><h3>Mes a mes</h3></div>
+                <p class="helper-text">Total de cada mes: ventas registradas + historia importada + totales sin detalle.</p>
+                ${tabla([
+                    { titulo: 'Mes', valor: x => `<span class="proy-mes"><strong>${fmtMes(x.mes, { month: 'long', year: 'numeric' })}</strong></span>${x.mes === r.mes ? ' <span class="pill pill-gray">Viendo</span>' : ''}` },
+                    { titulo: 'Ventas registradas', clase: 'num', valor: x => x.cantidad_ventas ? `${fmtCLP(x.sistema)}<span class="sub">${x.cantidad_ventas} ventas</span>` : '—' },
+                    { titulo: 'Prendas', clase: 'num', valor: x => fmtNumero(x.prendas) },
+                    { titulo: 'Total del mes', clase: 'num', valor: x => `<strong>${fmtCLP(x.total)}</strong>` },
+                    { titulo: '', clase: 'acciones', valor: x => (x.mes !== r.mes ? `<button class="btn btn-small" data-ver-mes="${x.mes.slice(0, 7)}">Ver</button>` : '')
+                        + (x.cantidad_ventas ? ` <button class="btn btn-small btn-danger" data-borrar-mes="${x.mes.slice(0, 7)}" data-cantidad="${x.cantidad_ventas}">Eliminar ventas</button>` : '') },
+                ], meses, 'Sin ventas.', { porPagina: 12 })}
             </div>`;
 
-        document.querySelectorAll('#resVentasContenido [data-ver-dia]').forEach(b => b.addEventListener('click', () => {
+        const contenido = document.getElementById('resVentasContenido');
+        contenido.querySelectorAll('[data-ver-dia]').forEach(b => b.addEventListener('click', () => {
             this.fecha = b.dataset.verDia;
-            document.querySelector('#resVentasModo [data-modo="dia"]').click();
+            this.modo = 'dia';
+            this.cargar();
         }));
+        contenido.querySelectorAll('[data-ver-mes]').forEach(b => b.addEventListener('click', () => {
+            this.mes = b.dataset.verMes;
+            this.cargar();
+            document.getElementById('ventasResumen').scrollIntoView({ behavior: 'smooth' });
+        }));
+        contenido.querySelectorAll('[data-borrar-mes]').forEach(b => b.addEventListener('click', () => this.eliminarMes(b.dataset.borrarMes, b.dataset.cantidad)));
+    },
+
+    // Anula todas las ventas registradas de un mes (no toca historia ni totales sin detalle).
+    eliminarMes(mes, cantidad) {
+        const nombre = fmtMes(`${mes}-01`, { month: 'long', year: 'numeric' });
+        if (!confirm(`¿Eliminar las ${cantidad} ventas registradas en ${nombre}?\n\n`
+            + 'Las prendas vuelven al stock y se borran sus pagos. La historia importada y los totales sin detalle no se tocan.')) return;
+        intentar(async () => {
+            const { eliminadas } = await api.delete(`/ventas/mes/${mes}`);
+            aviso(`${eliminadas} ventas de ${nombre} eliminadas.`);
+            await this.cargar();
+        });
     },
 
     // " · se confeccionaron 12 más de las vendidas" / "... 5 menos ..."
@@ -236,6 +297,10 @@ const resumenVentas = {
                 medios,
                 ['Rotación por producto', ['Producto', 'Vendidas', 'Confeccionadas', 'Monto'],
                     d.productos.map(p => [p.nombre, p.vendidas, p.confeccionadas, p.monto])],
+                ['Por colegio', ['Colegio', 'Prendas', 'Monto'],
+                    d.colegios.map(c => [c.nombre, c.prendas, c.total])],
+                ['Por tipo de prenda', ['Tipo', 'Prendas', 'Monto'],
+                    d.tipos.map(t => [t.nombre, t.prendas ?? '—', t.monto])],
                 ['Día a día', ['Fecha', 'Ventas', 'Vendido', 'Recaudado'],
                     d.por_dia.map(x => [fmtFecha(x.fecha), x.ventas, x.vendido, x.recaudado])],
             ],

@@ -1000,6 +1000,12 @@ h4.subtitulo:first-child {
     margin-top: 4px;
 }
 
+/* En pantallas angostas cada tabla se desliza dentro de su panel. */
+#ventasResumen .panel {
+    min-width: 0;
+    overflow-x: auto;
+}
+
 @media (max-width: 720px) {
     .barra-resumen-acciones {
         width: 100%;

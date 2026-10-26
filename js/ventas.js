@@ -22,7 +22,6 @@ vistas.ventas = {
 
     async iniciar() {
         document.querySelectorAll('#view-ventas .tab').forEach(t => t.addEventListener('click', () => {
-            document.querySelectorAll('#view-ventas .tab').forEach(x => x.classList.toggle('active', x === t));
             this.pestana = t.dataset.tab;
             this.cargar();
         }));
@@ -34,20 +33,25 @@ vistas.ventas = {
         await this.armarCarrito();
     },
 
+    // Abre Ventas → Resumen en la vista de un mes ("YYYY-MM").
+    // Lo usan el gráfico de Inicio y Resumen mensual.
+    abrirResumenMes(mes) {
+        resumenVentas.modo = 'mes';
+        resumenVentas.mes = mes;
+        this.pestana = 'resumen';
+        if (location.hash === '#ventas') this.cargar();
+        else location.hash = 'ventas';
+    },
+
     async cargar() {
+        document.querySelectorAll('#view-ventas .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === this.pestana));
         document.getElementById('ventasPos').hidden = this.pestana !== 'vender';
         document.getElementById('ventasHistorial').hidden = this.pestana !== 'historial';
         document.getElementById('ventasTotales').hidden = this.pestana !== 'totales';
-        document.getElementById('ventasPorMes').hidden = this.pestana !== 'mes';
         document.getElementById('ventasResumen').hidden = this.pestana !== 'resumen';
 
         if (this.pestana === 'resumen') {
             await resumenVentas.cargar();
-            return;
-        }
-
-        if (this.pestana === 'mes') {
-            await this.dibujarPorMes();
             return;
         }
 
@@ -78,79 +82,6 @@ vistas.ventas = {
         if (pago) params.set('estado_pago', pago);
         this.lista = await api.get('/ventas?' + params);
         this.dibujarHistorial();
-    },
-
-    // ---------- Ventas por mes ----------
-
-    async dibujarPorMes() {
-        const meses = await api.get('/reportes/ventas-mes');
-        const hayHistoria = meses.some(m => m.historia);
-        const haySinDetalle = meses.some(m => m.sin_detalle);
-        const contenedor = document.getElementById('ventasPorMesTabla');
-        contenedor.innerHTML = tabla([
-            { titulo: 'Mes', valor: m => `<span class="proy-mes"><strong>${fmtMes(m.mes, { month: 'long', year: 'numeric' })}</strong></span>` },
-            { titulo: 'Ventas registradas', clase: 'num', valor: m => m.cantidad_ventas ? `${fmtCLP(m.sistema)}<span class="sub">${m.cantidad_ventas} ventas</span>` : '—' },
-            ...(hayHistoria ? [{ titulo: 'Historia importada', clase: 'num', valor: m => m.historia ? fmtCLP(m.historia) : '—' }] : []),
-            ...(haySinDetalle ? [{ titulo: 'Totales sin detalle', clase: 'num', valor: m => m.sin_detalle ? fmtCLP(m.sin_detalle) : '—' }] : []),
-            { titulo: 'Prendas', clase: 'num', valor: m => fmtNumero(m.prendas) },
-            { titulo: 'Total del mes', clase: 'num', valor: m => `<strong>${fmtCLP(m.total)}</strong>` },
-            { titulo: '', clase: 'acciones', valor: m => (m.total ? `<button class="btn btn-small" data-mes="${m.mes.slice(0, 7)}">Ver detalle</button>` : '')
-                + (m.cantidad_ventas ? ` <button class="btn btn-small btn-danger" data-borrar-mes="${m.mes.slice(0, 7)}" data-cantidad="${m.cantidad_ventas}">Eliminar ventas</button>` : '') },
-        ], meses, 'Sin ventas.', { porPagina: 12 });
-        contenedor.querySelectorAll('[data-mes]').forEach(b => b.addEventListener('click', () => this.detalleMes(b.dataset.mes)));
-        contenedor.querySelectorAll('[data-borrar-mes]').forEach(b => b.addEventListener('click', () => {
-            const mes = b.dataset.borrarMes;
-            const nombre = fmtMes(`${mes}-01`, { month: 'long', year: 'numeric' });
-            if (!confirm(`¿Eliminar las ${b.dataset.cantidad} ventas registradas en ${nombre}?\n\n`
-                + 'Las prendas vuelven al stock y se borran sus pagos. La historia importada y los totales sin detalle no se tocan.')) return;
-            intentar(async () => {
-                const { eliminadas } = await api.delete(`/ventas/mes/${mes}`);
-                aviso(`${eliminadas} ventas de ${nombre} eliminadas.`);
-                await this.dibujarPorMes();
-            });
-        }));
-    },
-
-    // Desglose de un mes: por colegio, por tipo de prenda y productos más vendidos.
-    // También se abre al hacer clic en un mes del gráfico de Inicio.
-    async detalleMes(mes) {
-        const d = await api.get(`/reportes/ventas-mes/${mes}`);
-        const barra = (monto) => `<div class="avance"><i style="width:${d.total ? Math.round(monto / d.total * 100) : 0}%"></i></div>`;
-        const pct = monto => d.total ? `${Math.round(monto / d.total * 100)}%` : '—';
-        modal.abrir(`Ventas de ${fmtMes(d.mes, { month: 'long', year: 'numeric' })}`, `
-            <div class="franja">
-                <div class="franja-item"><span class="lbl">Total del mes</span><strong>${fmtCLP(d.total)}</strong>
-                    ${d.sin_detalle ? `<span class="sub">${fmtCLP(d.sin_detalle)} sin detalle</span>` : ''}</div>
-                <div class="franja-item"><span class="lbl">Prendas</span><strong>${fmtNumero(d.prendas)}</strong></div>
-                <div class="franja-item"><span class="lbl">Ventas registradas</span><strong>${fmtNumero(d.cantidad_ventas)}</strong>
-                    ${d.prendas ? `<span class="sub">Precio promedio ${fmtCLP(d.con_detalle / d.prendas)} por prenda</span>` : ''}</div>
-            </div>
-            <h3>Por colegio</h3>
-            ${tabla([
-                { titulo: 'Colegio', valor: c => `${esc(c.nombre)}${barra(c.total)}` },
-                { titulo: 'Prendas', clase: 'num', valor: c => c.prendas ? fmtNumero(c.prendas) : '—' },
-                { titulo: 'Monto', clase: 'num', valor: c => `<strong>${fmtCLP(c.total)}</strong>${c.sin_detalle ? `<span class="sub">${fmtCLP(c.sin_detalle)} sin detalle</span>` : ''}` },
-                { titulo: '%', clase: 'num', valor: c => pct(c.total) },
-            ], d.colegios, 'Sin ventas este mes.', { porPagina: 0 })}
-            <div class="two-col" style="margin-top:12px">
-                <div>
-                    <h3>Por tipo de prenda</h3>
-                    ${tabla([
-                        { titulo: 'Tipo', valor: t => esc(t.nombre) },
-                        { titulo: 'Prendas', clase: 'num', valor: t => t.prendas === null ? '—' : fmtNumero(t.prendas) },
-                        { titulo: 'Monto', clase: 'num', valor: t => fmtCLP(t.monto) },
-                        { titulo: '%', clase: 'num', valor: t => pct(t.monto) },
-                    ], d.tipos, 'Sin datos.', { porPagina: 0 })}
-                </div>
-                <div>
-                    <h3>Más vendidos</h3>
-                    ${tabla([
-                        { titulo: 'Producto', valor: p => esc(p.nombre) },
-                        { titulo: 'Prendas', clase: 'num', valor: p => fmtNumero(p.prendas) },
-                        { titulo: 'Monto', clase: 'num', valor: p => fmtCLP(p.monto) },
-                    ], d.productos, 'Sin datos de prendas.', { porPagina: 0 })}
-                </div>
-            </div>`, { ancho: true });
     },
 
     // ---------- Totales sin detalle (solo dinero) ----------

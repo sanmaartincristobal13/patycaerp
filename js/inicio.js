@@ -125,9 +125,9 @@ vistas.inicio = {
             alClick: hayVentas ? idx => {
                 const mes = idx <= ultimo ? completos[idx]?.mes : idx === ultimo + 1 ? actual.mes : null;
                 if (!mes) return;
-                // Con permiso de finanzas: resumen completo del mes; si no, solo el detalle de ventas.
+                // Con permiso de finanzas: resumen completo del mes; si no, el resumen de ventas del mes.
                 if (puede('finanzas')) vistas.resumen.abrir(mes.slice(0, 7));
-                else vistas.ventas.detalleMes(mes.slice(0, 7));
+                else vistas.ventas.abrirResumenMes(mes.slice(0, 7));
             } : null,
             extra: i => {
                 if (i <= ultimo && hayVentas && hayEgresos) {
