@@ -1,14 +1,18 @@
 // ======================================================
 // INVENTARIO - prendas terminadas, materiales y movimientos
 // ======================================================
-// El stock solo cambia por ventas, compras, producción o un
-// conteo físico. Todo queda en "Movimientos".
+// El stock solo cambia por ventas, compras, producción, una suma
+// manual o un conteo físico. Todo queda en "Movimientos".
+//
+// Candado: para sumar, contar o editar hay que abrirlo con el botón
+// "Editar o sumar inventario". Se cierra solo al salir de Inventario.
 // ======================================================
 
 vistas.inventario = {
 
     pestana: 'prendas',
     datos: [],
+    edicion: false,      // candado abierto
 
     iniciar() {
         document.querySelectorAll('#view-inventario .tab').forEach(t => t.addEventListener('click', () => {
@@ -19,7 +23,36 @@ vistas.inventario = {
         document.getElementById('inventarioBuscar').addEventListener('input', () => this.dibujar());
         document.getElementById('inventarioSoloConteo').addEventListener('change', () => this.dibujar());
         document.getElementById('btnNuevoMaterial').addEventListener('click', () => this.formularioMaterial());
+        document.getElementById('btnEditarInventario').addEventListener('click', () => this.cambiarEdicion(!this.edicion));
+        // Sin permiso de inventario no hay nada que desbloquear.
         document.getElementById('btnNuevoMaterial').hidden = !puede('inventario');
+        document.getElementById('btnEditarInventario').hidden = !puede('inventario');
+        // Al salir de Inventario el candado vuelve a cerrarse.
+        window.addEventListener('hashchange', () => { if (location.hash !== '#inventario' && this.edicion) this.cambiarEdicion(false, false); });
+        this.cambiarEdicion(false, false);
+    },
+
+    cambiarEdicion(abierto, redibujar = true) {
+        this.edicion = abierto;
+        const boton = document.getElementById('btnEditarInventario');
+        boton.textContent = abierto ? '🔓 Terminar edición' : '🔒 Editar o sumar inventario';
+        boton.classList.toggle('activo', abierto);
+        boton.setAttribute('aria-pressed', String(abierto));
+        const nuevo = document.getElementById('btnNuevoMaterial');
+        nuevo.disabled = !abierto;
+        nuevo.title = abierto ? '' : 'Primero presione «Editar o sumar inventario»';
+        if (redibujar) this.dibujar();
+    },
+
+    // Aviso bajo los filtros según el estado del candado (solo en pestañas editables).
+    mostrarCandado() {
+        const aviso = document.getElementById('inventarioCandado');
+        const editable = puede('inventario') && ['prendas', 'materiales'].includes(this.pestana);
+        aviso.hidden = !editable;
+        aviso.classList.toggle('abierto', this.edicion);
+        aviso.innerHTML = this.edicion
+            ? '🔓 <strong>Edición activa.</strong> Use <strong>Sumar</strong> para agregar lo que llegó o <strong>Contar</strong> para fijar el total real. Presione «Terminar edición» al terminar.'
+            : '🔒 Inventario bloqueado. Para sumar, contar o editar, presione <strong>«Editar o sumar inventario»</strong>.';
     },
 
     async cargar() {
@@ -42,6 +75,9 @@ vistas.inventario = {
             : minimo !== null && stock <= minimo ? '<span class="pill pill-red">Bajo mínimo</span>'
             : '<span class="pill pill-green">OK</span>';
         const contenedor = document.getElementById('inventarioTabla');
+        this.mostrarCandado();
+        // Con el candado cerrado no se muestran las acciones que modifican el stock.
+        const acciones = this.edicion && puede('inventario');
 
         if (this.pestana === 'prendas') {
             const filas = this.datos.filter(s =>
@@ -53,13 +89,17 @@ vistas.inventario = {
                 { titulo: 'Stock', clase: 'num', valor: s => `<strong>${fmtNumero(s.stock)}</strong>` },
                 { titulo: 'Mínimo', clase: 'num', valor: s => fmtNumero(s.stock_minimo) },
                 { titulo: 'Estado', valor: s => estadoStock(s.stock, s.stock_minimo) },
-                { titulo: '', clase: 'acciones', valor: (s, i) => `<button class="btn btn-small" data-contar="${s.producto_id}|${esc(s.talla)}">Contar</button>` },
+                ...(acciones ? [{ titulo: '', clase: 'acciones', valor: s => `
+                    <button class="btn btn-small btn-primary" data-sumar="${s.producto_id}|${esc(s.talla)}">+ Sumar</button>
+                    <button class="btn btn-small" data-contar="${s.producto_id}|${esc(s.talla)}">Contar</button>` }] : []),
             ], filas, 'No hay prendas con este filtro.');
 
-            contenedor.querySelectorAll('[data-contar]').forEach(b => b.addEventListener('click', () => {
-                const [productoId, talla] = b.dataset.contar.split('|');
-                this.conteo(this.datos.find(s => s.producto_id === num(productoId) && s.talla === talla), 'prenda');
-            }));
+            const prenda = clave => {
+                const [productoId, talla] = clave.split('|');
+                return this.datos.find(s => s.producto_id === num(productoId) && s.talla === talla);
+            };
+            contenedor.querySelectorAll('[data-sumar]').forEach(b => b.addEventListener('click', () => this.sumar(prenda(b.dataset.sumar), 'prenda')));
+            contenedor.querySelectorAll('[data-contar]').forEach(b => b.addEventListener('click', () => this.conteo(prenda(b.dataset.contar), 'prenda')));
         }
 
         if (this.pestana === 'materiales') {
@@ -72,11 +112,14 @@ vistas.inventario = {
                 { titulo: 'Mínimo', clase: 'num', valor: m => fmtNumero(m.stock_minimo) },
                 { titulo: 'Último precio', clase: 'num', valor: m => fmtCLP(m.ultimo_precio) },
                 { titulo: 'Estado', valor: m => estadoStock(m.stock, m.stock_minimo) },
-                { titulo: '', clase: 'acciones', valor: m => `
+                ...(acciones ? [{ titulo: '', clase: 'acciones', valor: m => `
+                    <button class="btn btn-small btn-primary" data-sumar="${m.id}">+ Sumar</button>
                     <button class="btn btn-small" data-contar="${m.id}">Contar</button>
-                    <button class="btn btn-small" data-editar="${m.id}">Editar</button>` },
+                    <button class="btn btn-small" data-editar="${m.id}">Editar</button>` }] : []),
             ], filas, 'No hay materiales con este filtro.');
 
+            contenedor.querySelectorAll('[data-sumar]').forEach(b => b.addEventListener('click', () =>
+                this.sumar(this.datos.find(m => m.id === num(b.dataset.sumar)), 'material')));
             contenedor.querySelectorAll('[data-contar]').forEach(b => b.addEventListener('click', () =>
                 this.conteo(this.datos.find(m => m.id === num(b.dataset.contar)), 'material')));
             contenedor.querySelectorAll('[data-editar]').forEach(b => b.addEventListener('click', () =>
@@ -142,19 +185,54 @@ vistas.inventario = {
         }
     },
 
-    // Conteo físico: fija el stock real y deja registro del ajuste.
-    conteo(item, tipo) {
-        const nombre = tipo === 'prenda' ? `${item.producto} · Talla ${item.talla}` : item.detalle;
-        const caja = modal.abrir('Conteo de stock', `
+    nombreItem(item, tipo) {
+        return tipo === 'prenda' ? `${item.producto} · Talla ${item.talla}` : item.detalle;
+    },
+
+    // Suma rápida: solo pide cuánto llegó y muestra en cuánto queda el stock.
+    sumar(item, tipo) {
+        const unidad = tipo === 'prenda' ? 'unidades' : item.unidad;
+        const actual = Number(item.stock || 0);
+        const caja = modal.abrir('Sumar al stock', `
             <form>
-                <p class="aviso">${esc(nombre)}<br>Stock actual en sistema: <strong>${fmtNumero(item.stock)}</strong></p>
-                <div class="form-grid">
-                    ${campo('Cantidad contada', `<input type="number" name="stock" min="0" step="${tipo === 'prenda' ? 1 : 'any'}" required value="${esc(item.stock ?? '')}">`)}
-                    ${campo('Stock objetivo (hasta dónde reponer)', `<input type="number" name="stock_objetivo" min="0" step="any" value="${esc(item.stock_objetivo ?? '')}">`)}
-                    ${campo('Stock mínimo (alerta)', `<input type="number" name="stock_minimo" min="0" step="any" value="${esc(item.stock_minimo ?? '')}">`)}
-                </div>
+                <p class="aviso">${esc(this.nombreItem(item, tipo))}<br>Stock actual: <strong>${fmtNumero(item.stock ?? 0)} ${esc(unidad)}</strong></p>
+                ${campo(`Cantidad a sumar (${unidad})`, `<input type="number" name="cantidad" min="${tipo === 'prenda' ? 1 : 0.001}" step="${tipo === 'prenda' ? 1 : 'any'}" required>`)}
+                <p class="helper-text" data-queda>Quedará en ${fmtNumero(actual)} ${esc(unidad)}.</p>
+                ${PIE_FORM('Sumar')}
+            </form>`);
+        const form = caja.querySelector('form');
+        form.cantidad.addEventListener('input', () => {
+            form.querySelector('[data-queda]').textContent = `Quedará en ${fmtNumero(actual + (num(form.cantidad.value) || 0))} ${unidad}.`;
+        });
+        alEnviar(form, async datos => {
+            const ruta = tipo === 'prenda'
+                ? `/inventario/prendas/${item.producto_id}/${encodeURIComponent(item.talla)}/sumar`
+                : `/inventario/materiales/${item.id}/sumar`;
+            await api.post(ruta, { cantidad: num(datos.cantidad) });
+            if (tipo === 'material') compartido.refrescar('materiales');
+            modal.cerrar();
+            aviso(`Se sumaron ${fmtNumero(num(datos.cantidad))} ${unidad}.`);
+            await this.cargar();
+        });
+    },
+
+    // Conteo físico: fija el stock real y deja registro del ajuste.
+    // Mínimo y objetivo quedan plegados: casi nunca cambian.
+    conteo(item, tipo) {
+        const caja = modal.abrir('Contar (fijar el total)', `
+            <form>
+                <p class="aviso">${esc(this.nombreItem(item, tipo))}<br>Stock actual en sistema: <strong>${fmtNumero(item.stock)}</strong></p>
+                ${campo('Cantidad contada (total real)', `<input type="number" name="stock" min="0" step="${tipo === 'prenda' ? 1 : 'any'}" required value="${esc(item.stock ?? '')}">`)}
+                <details class="plegable">
+                    <summary>Mínimo y objetivo (opcional)</summary>
+                    <div class="form-grid">
+                        ${campo('Stock mínimo (alerta)', `<input type="number" name="stock_minimo" min="0" step="any" value="${esc(item.stock_minimo ?? '')}">`)}
+                        ${campo('Stock objetivo (hasta dónde reponer)', `<input type="number" name="stock_objetivo" min="0" step="any" value="${esc(item.stock_objetivo ?? '')}">`)}
+                    </div>
+                </details>
                 ${PIE_FORM('Guardar conteo')}
             </form>`);
+        caja.querySelector('[name=stock]').select();
 
         alEnviar(caja.querySelector('form'), async datos => {
             const ruta = tipo === 'prenda'
@@ -165,6 +243,7 @@ vistas.inventario = {
                 stock_minimo: num(datos.stock_minimo),
                 stock_objetivo: num(datos.stock_objetivo),
             });
+            if (tipo === 'material') compartido.refrescar('materiales');
             modal.cerrar();
             aviso('Conteo guardado.');
             await this.cargar();

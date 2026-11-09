@@ -87,6 +87,38 @@ router.put('/materiales/:id', requiereModulo('inventario'), async (req, res) => 
     res.status(204).end();
 });
 
+// POST /api/inventario/prendas/:productoId/:talla/sumar  { cantidad }
+// Suma rápida (ej. llegaron prendas): agrega al stock sin tocar mínimo ni objetivo.
+router.post('/prendas/:productoId/:talla/sumar', requiereModulo('inventario'), async (req, res) => {
+    const productoId = v.id(req.params.productoId, 'productoId');
+    const talla = req.params.talla;
+    const cantidad = v.numero(req.body.cantidad, 'cantidad', { min: 1, entero: true });
+    await transaccion(async client => {
+        await moverStockPrenda(client, {
+            productoId, talla, delta: cantidad, tipo: 'Ajuste manual',
+            referencia: 'Suma manual', usuarioId: req.usuario.id,
+        });
+        await registrarActividad(client, req.usuario.id, 'Inventario', 'Suma',
+            `Suma de ${cantidad} unidades a prenda ${productoId} talla ${talla}`);
+    });
+    res.status(204).end();
+});
+
+// POST /api/inventario/materiales/:id/sumar  { cantidad }
+router.post('/materiales/:id/sumar', requiereModulo('inventario'), async (req, res) => {
+    const id = v.id(req.params.id);
+    const cantidad = v.numero(req.body.cantidad, 'cantidad', { min: 0.001 });
+    await transaccion(async client => {
+        await moverStockMaterial(client, {
+            materialId: id, delta: cantidad, tipo: 'Ajuste manual',
+            referencia: 'Suma manual', usuarioId: req.usuario.id,
+        });
+        await registrarActividad(client, req.usuario.id, 'Inventario', 'Suma',
+            `Suma de ${cantidad} a material ${id}`);
+    });
+    res.status(204).end();
+});
+
 // GET /api/inventario/reposicion
 // Sugerencia de compra de materiales (no modifica nada).
 //   demanda   = lo que piden las órdenes abiertas según su ficha de materiales

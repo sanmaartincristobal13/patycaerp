@@ -1015,3 +1015,41 @@ h4.subtitulo:first-child {
         flex: 1;
     }
 }
+
+/* ---------- Inventario: candado de edición ---------- */
+
+.btn-candado.activo {
+    border-color: var(--gold);
+    background: var(--gold-soft);
+    color: var(--text);
+    font-weight: 700;
+}
+
+.aviso-candado {
+    margin-bottom: 12px;
+    background: var(--gray-bg);
+    color: var(--muted);
+}
+
+.aviso-candado.abierto {
+    background: var(--gold-soft);
+    color: var(--text);
+    border-left: 4px solid var(--gold);
+}
+
+.head-actions .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+details.plegable {
+    margin: 4px 0 8px;
+}
+
+details.plegable summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
