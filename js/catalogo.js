@@ -3,15 +3,43 @@
 // ======================================================
 // Los precios se ingresan por grupo de tallas, igual que en la
 // lista de precios de la tienda: "4-6-8" → $8.000.
+//
+// Candado: para crear, editar o quitar productos y establecimientos hay
+// que abrirlo con "Editar catálogo". Se cierra solo al salir de Catálogo.
 // ======================================================
 
 vistas.catalogo = {
+
+    edicion: false,      // candado abierto
 
     iniciar() {
         document.getElementById('btnNuevoProducto').addEventListener('click', () => this.formularioProducto());
         document.getElementById('btnNuevoEstablecimiento').addEventListener('click', () => this.establecimientos());
         document.getElementById('catalogoFiltroEst').addEventListener('change', () => this.dibujar());
         document.getElementById('catalogoBuscar').addEventListener('input', () => this.dibujar());
+        document.getElementById('btnEditarCatalogo').addEventListener('click', () => this.cambiarEdicion(!this.edicion));
+        // Al salir de Catálogo el candado vuelve a cerrarse.
+        window.addEventListener('hashchange', () => { if (location.hash !== '#catalogo' && this.edicion) this.cambiarEdicion(false, false); });
+        this.cambiarEdicion(false, false);
+    },
+
+    cambiarEdicion(abierto, redibujar = true) {
+        this.edicion = abierto;
+        const boton = document.getElementById('btnEditarCatalogo');
+        boton.textContent = abierto ? '🔓 Terminar edición' : '🔒 Editar catálogo';
+        boton.classList.toggle('activo', abierto);
+        boton.setAttribute('aria-pressed', String(abierto));
+        for (const id of ['btnNuevoProducto', 'btnNuevoEstablecimiento']) {
+            const b = document.getElementById(id);
+            b.disabled = !abierto;
+            b.title = abierto ? '' : 'Primero presione «Editar catálogo»';
+        }
+        const aviso = document.getElementById('catalogoCandado');
+        aviso.classList.toggle('abierto', abierto);
+        aviso.innerHTML = abierto
+            ? '🔓 <strong>Edición activa.</strong> Puede crear, editar o quitar productos y establecimientos. Presione «Terminar edición» al terminar.'
+            : '🔒 Catálogo bloqueado. Para crear, editar o quitar, presione <strong>«Editar catálogo»</strong>.';
+        if (redibujar) this.dibujar();
     },
 
     async cargar() {
@@ -40,9 +68,10 @@ vistas.catalogo = {
             { titulo: 'Producto', valor: p => `<strong>${esc(p.nombre)}</strong>${p.componentes.length ? `<span class="sub">Conjunto: ${p.componentes.map(c => esc(c.nombre)).join(' + ')}</span>` : ''}${p.observaciones ? `<span class="sub">${esc(p.observaciones)}</span>` : ''}` },
             { titulo: 'Año', valor: p => p.anio ?? '—' },
             { titulo: 'Precios', valor: p => p.precios.map(g => `<span class="pill pill-gray">${esc(g.grupo)}: ${fmtCLP(g.precio)}</span>`).join(' ') },
-            { titulo: '', clase: 'acciones', valor: p => `
+            // Con el candado cerrado no se muestran las acciones que modifican el catálogo.
+            ...(this.edicion ? [{ titulo: '', clase: 'acciones', valor: p => `
                 <button class="btn btn-small" data-editar="${p.id}">Editar</button>
-                <button class="btn btn-small btn-danger" data-borrar="${p.id}">Quitar</button>` },
+                <button class="btn btn-small btn-danger" data-borrar="${p.id}">Quitar</button>` }] : []),
         ], filas, 'No hay productos con este filtro.');
 
         document.querySelectorAll('#catalogoTabla [data-editar]').forEach(b => b.addEventListener('click', () =>
