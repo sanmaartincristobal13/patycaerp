@@ -52,18 +52,13 @@
             <button class="nav-main" data-view="cotizaciones" data-modulo="cotizaciones"><span class="nav-icon">❏</span><span>Cotizaciones</span></button>
             <button class="nav-main" data-view="catalogo" data-modulo="catalogo"><span class="nav-icon">◫</span><span>Catálogo</span></button>
             <button class="nav-main" data-view="inventario" data-modulo="inventario"><span class="nav-icon">▤</span><span>Inventario</span></button>
+            <button class="nav-main" data-view="produccion" data-modulo="produccion"><span class="nav-icon">✂</span><span>Producción</span></button>
 
-            <!-- Grupos plegables: se abren solos si contienen la vista activa -->
-            <div class="nav-group collapsed">
-                <button class="nav-group-title">OPERACIÓN <b>▾</b></button>
-                <div class="nav-group-items">
-                    <button data-view="produccion" data-modulo="produccion"><span class="nav-icon">✂</span><span>Producción</span></button>
-                    <button data-view="compras" data-modulo="compras"><span class="nav-icon">⇩</span><span>Compras y gastos</span></button>
-                </div>
-            </div>
+            <!-- Grupo plegable: se abre solo si contiene la vista activa -->
             <div class="nav-group collapsed">
                 <button class="nav-group-title">FINANZAS <b>▾</b></button>
                 <div class="nav-group-items">
+                    <button data-view="compras" data-modulo="compras"><span class="nav-icon">⇩</span><span>Compras y gastos</span></button>
                     <button data-view="resumen" data-modulo="finanzas"><span class="nav-icon">◷</span><span>Resumen mensual</span></button>
                     <button data-view="resumen-ventas" data-modulo="ventas"><span class="nav-icon">≡</span><span>Resumen de ventas</span></button>
                     <button data-view="proyeccion" data-modulo="reportes"><span class="nav-icon">↗</span><span>Proyección</span></button>
