@@ -41,6 +41,13 @@ botonesMenu.forEach(boton => {
 
 const vistasPermitidas = botonesMenu.filter(b => !b.hidden).map(b => b.dataset.view);
 
+// Grupos plegables: se ocultan si el rol no ve ninguno de sus módulos
+document.querySelectorAll('#nav .nav-group').forEach(grupo => {
+    grupo.hidden = [...grupo.querySelectorAll('[data-view]')].every(b => b.hidden);
+    grupo.querySelector('.nav-group-title').addEventListener('click', () =>
+        grupo.classList.toggle('collapsed'));
+});
+
 
 // ---------- Navegación ----------
 
@@ -53,6 +60,7 @@ async function mostrarVista() {
 
     document.querySelectorAll('.view').forEach(v => (v.hidden = v.id !== `view-${nombre}`));
     botonesMenu.forEach(b => b.classList.toggle('active', b.dataset.view === nombre));
+    botonesMenu.find(b => b.dataset.view === nombre).closest('.nav-group')?.classList.remove('collapsed');
     document.getElementById('breadcrumb').textContent =
         botonesMenu.find(b => b.dataset.view === nombre).querySelector('span:last-child').textContent;
     document.getElementById('sidebar').classList.remove('open');
