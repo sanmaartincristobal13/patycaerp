@@ -80,19 +80,18 @@ vistas.inventario = {
         const acciones = this.edicion && puede('inventario');
 
         if (this.pestana === 'prendas') {
-            const filas = this.datos.filter(s =>
+            // Los conjuntos (Buzo) no se muestran: su stock son sus partes (polerón y pantalón),
+            // que se suman y cuentan aquí. El conjunto existe solo en Catálogo y en la venta.
+            const filas = this.datos.filter(s => !s.es_conjunto &&
                 coincide(`${s.establecimiento} ${s.producto} ${s.talla}`) && (!soloConteo || s.stock !== null));
             contenedor.innerHTML = tabla([
                 { titulo: 'Establecimiento', valor: s => esc(s.establecimiento) },
-                { titulo: 'Producto', valor: s => `${esc(s.producto)}${s.es_conjunto ? '<span class="sub">Conjunto: stock según sus partes</span>' : ''}` },
+                { titulo: 'Producto', valor: s => esc(s.producto) },
                 { titulo: 'Talla', valor: s => esc(s.talla) },
                 { titulo: 'Stock', clase: 'num', valor: s => `<strong>${fmtNumero(s.stock)}</strong>` },
                 { titulo: 'Mínimo', clase: 'num', valor: s => fmtNumero(s.stock_minimo) },
                 { titulo: 'Estado', valor: s => estadoStock(s.stock, s.stock_minimo) },
-                // Conjunto (Buzo): sumar buzos completos suma a cada parte; el conteo se hace en cada parte.
-                ...(acciones ? [{ titulo: '', clase: 'acciones', valor: s => s.es_conjunto ? `
-                    <button class="btn btn-small btn-primary" data-sumar="${s.producto_id}|${esc(s.talla)}">+ Sumar buzos</button>
-                    <span class="sub">Se cuenta en sus partes</span>` : `
+                ...(acciones ? [{ titulo: '', clase: 'acciones', valor: s => `
                     <button class="btn btn-small btn-primary" data-sumar="${s.producto_id}|${esc(s.talla)}">+ Sumar</button>
                     <button class="btn btn-small" data-contar="${s.producto_id}|${esc(s.talla)}">Contar</button>` }] : []),
             ], filas, 'No hay prendas con este filtro.');
@@ -194,14 +193,10 @@ vistas.inventario = {
 
     // Suma rápida: solo pide cuánto llegó y muestra en cuánto queda el stock.
     sumar(item, tipo) {
-        const conjunto = tipo === 'prenda' && item.es_conjunto;
-        const unidad = conjunto ? 'buzos completos' : tipo === 'prenda' ? 'unidades' : item.unidad;
+        const unidad = tipo === 'prenda' ? 'unidades' : item.unidad;
         const actual = Number(item.stock || 0);
-        // En un conjunto la suma se aplica a cada parte (ej. 10 buzos = +10 polerones y +10 pantalones).
-        const texto = n => conjunto
-            ? `Se suman ${fmtNumero(n)} a cada parte (polerón y pantalón de buzo, talla ${item.talla}).`
-            : `Quedará en ${fmtNumero(actual + n)} ${unidad}.`;
-        const caja = modal.abrir(conjunto ? 'Sumar buzos completos' : 'Sumar al stock', `
+        const texto = n => `Quedará en ${fmtNumero(actual + n)} ${unidad}.`;
+        const caja = modal.abrir('Sumar al stock', `
             <form>
                 <p class="aviso">${esc(this.nombreItem(item, tipo))}<br>Stock actual: <strong>${fmtNumero(item.stock ?? 0)} ${esc(unidad)}</strong></p>
                 ${campo(`Cantidad a sumar (${unidad})`, `<input type="number" name="cantidad" min="${tipo === 'prenda' ? 1 : 0.001}" step="${tipo === 'prenda' ? 1 : 'any'}" required>`)}
