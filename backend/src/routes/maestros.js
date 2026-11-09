@@ -4,7 +4,7 @@ const { Router } = require('express');
 const { query, transaccion } = require('../db');
 const { requiereModulo } = require('../lib/auth');
 const { noEncontrado, solicitudInvalida } = require('../lib/errores');
-const { siguienteCodigo } = require('../lib/registro');
+const { siguienteCodigo, registrarActividad } = require('../lib/registro');
 const v = require('../lib/validar');
 
 const router = Router();
@@ -13,8 +13,12 @@ const router = Router();
 // ESTABLECIMIENTOS
 // ======================================================
 
+// Solo los activos (los archivados siguen en los reportes, pero no en listas ni selectores).
 router.get('/establecimientos', async (req, res) => {
-    const { rows } = await query('SELECT * FROM establecimientos ORDER BY codigo');
+    const { rows } = await query(
+        `SELECT e.*, (SELECT count(*)::int FROM productos p WHERE p.establecimiento_id = e.id AND p.activo) AS productos
+         FROM establecimientos e WHERE e.activo ORDER BY e.codigo`
+    );
     res.json(rows);
 });
 
@@ -25,6 +29,14 @@ function datosEstablecimiento(b) {
 
 router.post('/establecimientos', requiereModulo('catalogo'), async (req, res) => {
     const creado = await transaccion(async client => {
+        // Si existía archivado con el mismo nombre, se vuelve a activar (sus productos siguen quitados).
+        const [nombre, tipo, anio] = datosEstablecimiento(req.body);
+        const { rows: archivado } = await client.query(
+            `UPDATE establecimientos SET activo = true, tipo = $2, anio_precio = $3
+             WHERE lower(nombre) = lower($1) AND NOT activo RETURNING *`,
+            [nombre, tipo, anio]
+        );
+        if (archivado[0]) return archivado[0];
         const codigo = await siguienteCodigo(client, 'establecimientos', 'EST-', 3);
         const { rows } = await client.query(
             `INSERT INTO establecimientos (codigo, nombre, tipo, anio_precio)
@@ -46,10 +58,46 @@ router.put('/establecimientos/:id', requiereModulo('catalogo'), async (req, res)
     res.json(rows[0]);
 });
 
+// DELETE /api/establecimientos/:id
+// Sin historial (ventas, cotizaciones, órdenes, historia, movimientos de stock o
+// totales sin detalle): se elimina con sus productos y precios.
+// Con historial: se archiva (él y sus productos dejan de aparecer en listas y en
+// el punto de venta, pero las ventas pasadas siguen en los reportes).
+// Responde { accion: 'eliminado' | 'archivado', productos }.
 router.delete('/establecimientos/:id', requiereModulo('catalogo'), async (req, res) => {
-    const { rowCount } = await query('DELETE FROM establecimientos WHERE id = $1', [v.id(req.params.id)]);
-    if (!rowCount) throw noEncontrado('Establecimiento');
-    res.status(204).end();
+    const id = v.id(req.params.id);
+    const resultado = await transaccion(async client => {
+        const { rows: [est] } = await client.query('SELECT * FROM establecimientos WHERE id = $1 FOR UPDATE', [id]);
+        if (!est) throw noEncontrado('Establecimiento');
+        const { rows: [uso] } = await client.query(
+            `WITH prods AS (SELECT id FROM productos WHERE establecimiento_id = $1)
+             SELECT (SELECT count(*)::int FROM prods) AS productos,
+                    EXISTS (SELECT 1 FROM venta_items WHERE producto_id IN (SELECT id FROM prods))
+                 OR EXISTS (SELECT 1 FROM cotizacion_items WHERE producto_id IN (SELECT id FROM prods))
+                 OR EXISTS (SELECT 1 FROM ordenes_produccion WHERE producto_id IN (SELECT id FROM prods))
+                 OR EXISTS (SELECT 1 FROM ventas_historicas WHERE producto_id IN (SELECT id FROM prods))
+                 OR EXISTS (SELECT 1 FROM movimientos_inventario WHERE producto_id IN (SELECT id FROM prods))
+                 OR EXISTS (SELECT 1 FROM ventas_resumen WHERE establecimiento_id = $1) AS con_historial`,
+            [id]
+        );
+
+        if (uso.con_historial) {
+            await client.query('UPDATE establecimientos SET activo = false WHERE id = $1', [id]);
+            await client.query('UPDATE productos SET activo = false WHERE establecimiento_id = $1', [id]);
+            await registrarActividad(client, req.usuario.id, 'Catálogo', 'Archivar',
+                `Establecimiento ${est.nombre} archivado (tiene historial)`, est.codigo);
+            return { accion: 'archivado', productos: uso.productos };
+        }
+
+        // Sin historial: fuera stock en cero, productos (sus tallas y fichas caen en cascada) y el establecimiento.
+        await client.query('DELETE FROM stock_prendas WHERE producto_id IN (SELECT id FROM productos WHERE establecimiento_id = $1)', [id]);
+        await client.query('DELETE FROM productos WHERE establecimiento_id = $1', [id]);
+        await client.query('DELETE FROM establecimientos WHERE id = $1', [id]);
+        await registrarActividad(client, req.usuario.id, 'Catálogo', 'Eliminar',
+            `Establecimiento ${est.nombre} eliminado con ${uso.productos} productos`, est.codigo);
+        return { accion: 'eliminado', productos: uso.productos };
+    });
+    res.json(resultado);
 });
 
 // ======================================================

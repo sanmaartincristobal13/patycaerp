@@ -109,7 +109,8 @@ CREATE TABLE establecimientos (
     codigo       text    NOT NULL UNIQUE,
     nombre       text    NOT NULL UNIQUE,
     tipo         text    NOT NULL DEFAULT 'Establecimiento' CHECK (tipo IN ('Establecimiento', 'Línea')),
-    anio_precio  integer
+    anio_precio  integer,
+    activo       boolean NOT NULL DEFAULT true    -- false = archivado (tiene historial, no se borra)
 );
 
 -- Telas con las que se confeccionan las prendas (Algodón, Fantasía).

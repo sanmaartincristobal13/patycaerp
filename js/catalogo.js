@@ -9,7 +9,7 @@ vistas.catalogo = {
 
     iniciar() {
         document.getElementById('btnNuevoProducto').addEventListener('click', () => this.formularioProducto());
-        document.getElementById('btnNuevoEstablecimiento').addEventListener('click', () => this.formularioEstablecimiento());
+        document.getElementById('btnNuevoEstablecimiento').addEventListener('click', () => this.establecimientos());
         document.getElementById('catalogoFiltroEst').addEventListener('change', () => this.dibujar());
         document.getElementById('catalogoBuscar').addEventListener('input', () => this.dibujar());
     },
@@ -121,6 +121,43 @@ vistas.catalogo = {
         });
     },
 
+    // Lista de establecimientos con su cantidad de productos, para crear o eliminar.
+    async establecimientos() {
+        compartido.refrescar('establecimientos');
+        const lista = await compartido.obtener('establecimientos');
+        const caja = modal.abrir('Establecimientos', `
+            <div class="filtros" style="justify-content:space-between">
+                <p class="helper-text" style="margin:0">Al eliminar un establecimiento con ventas u órdenes registradas, se archiva: deja de aparecer, pero su historial se conserva en los reportes.</p>
+                <button type="button" class="btn btn-primary" data-nuevo>+ Nuevo</button>
+            </div>
+            ${tabla([
+                { titulo: 'Código', valor: e => esc(e.codigo) },
+                { titulo: 'Nombre', valor: e => `<strong>${esc(e.nombre)}</strong><span class="sub">${esc(e.tipo)}${e.anio_precio ? ` · precios ${e.anio_precio}` : ''}</span>` },
+                { titulo: 'Productos', clase: 'num', valor: e => e.productos || '—' },
+                { titulo: '', clase: 'acciones', valor: e => `<button class="btn btn-small btn-danger" data-eliminar="${e.id}">Eliminar</button>` },
+            ], lista, 'No hay establecimientos.', { porPagina: 0 })}
+            <div class="modal-actions"><button type="button" class="btn" data-cerrar>Cerrar</button></div>`, { ancho: true });
+
+        caja.querySelector('[data-nuevo]').addEventListener('click', () => this.formularioEstablecimiento());
+        caja.querySelectorAll('[data-eliminar]').forEach(b => b.addEventListener('click', () => {
+            const e = lista.find(x => x.id === num(b.dataset.eliminar));
+            const detalle = e.productos
+                ? `Se quitarán también sus ${e.productos} producto${e.productos === 1 ? '' : 's'} del catálogo y del punto de venta.`
+                : 'No tiene productos.';
+            if (!confirm(`¿Eliminar "${e.nombre}"?\n\n${detalle}\nSi tiene ventas u órdenes registradas, se archiva y su historial se conserva.`)) return;
+            intentar(async () => {
+                const r = await api.delete(`/establecimientos/${e.id}`);
+                compartido.refrescar('establecimientos');
+                compartido.refrescar('productos');
+                aviso(r.accion === 'eliminado'
+                    ? `${e.nombre} eliminado.`
+                    : `${e.nombre} archivado: tenía historial, que se conserva en los reportes.`);
+                await this.cargar();
+                await this.establecimientos();
+            });
+        }));
+    },
+
     formularioEstablecimiento() {
         const caja = modal.abrir('Nuevo establecimiento', `
             <form>
@@ -135,9 +172,9 @@ vistas.catalogo = {
         alEnviar(caja.querySelector('form'), async datos => {
             await api.post('/establecimientos', { ...datos, anio_precio: num(datos.anio_precio) });
             compartido.refrescar('establecimientos');
-            modal.cerrar();
             aviso('Establecimiento creado.');
             await this.cargar();
+            await this.establecimientos();
         });
     },
 };
