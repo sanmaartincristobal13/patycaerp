@@ -24,7 +24,7 @@ const SELECT_VENTA = `
                FROM venta_items i
                JOIN productos p ON p.id = i.producto_id
                JOIN establecimientos e ON e.id = p.establecimiento_id
-               LEFT JOIN stock_prendas sp ON sp.producto_id = i.producto_id AND sp.talla = i.talla
+               LEFT JOIN v_stock_prendas sp ON sp.producto_id = i.producto_id AND sp.talla = i.talla
                WHERE i.venta_id = v.id
            ), '[]') AS items,
            -- Encargo listo para retirar: todas sus prendas ya están reservadas.
@@ -77,13 +77,18 @@ async function descontarStock(client, usuarioId, venta, items) {
 // Devuelve cuántas reservó. La usa también Producción al terminar una orden del encargo.
 async function reservarEnEncargo(client, usuarioId, { itemId, maximo }) {
     const { rows: [it] } = await client.query(
-        `SELECT i.id, i.producto_id, i.talla, i.cantidad, i.cantidad_reservada, v.codigo, coalesce(sp.stock, 0) AS stock
+        `SELECT i.id, i.producto_id, i.talla, i.cantidad, i.cantidad_reservada, v.codigo
          FROM venta_items i
          JOIN ventas v ON v.id = i.venta_id
-         LEFT JOIN stock_prendas sp ON sp.producto_id = i.producto_id AND sp.talla = i.talla
          WHERE i.id = $1 FOR UPDATE OF i`,
         [itemId]
     );
+    // Para un conjunto, el stock disponible es el menor entre sus partes.
+    const { rows: [sp] } = await client.query(
+        'SELECT coalesce(stock, 0) AS stock FROM v_stock_prendas WHERE producto_id = $1 AND talla = $2',
+        [it.producto_id, it.talla]
+    );
+    it.stock = sp?.stock ?? 0;
     const reservar = Math.min(maximo, it.cantidad - it.cantidad_reservada, Math.max(0, it.stock));
     if (reservar <= 0) return 0;
     await moverStockPrenda(client, {

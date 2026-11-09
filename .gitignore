@@ -1,4 +1,3 @@
-# Generado por el build de Vercel
-public/
-.vercel
-node_modules/
+.env
+.env.local
+node_modules

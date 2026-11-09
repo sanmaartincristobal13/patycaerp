@@ -37,7 +37,7 @@ vistas.catalogo = {
             { titulo: 'Código', valor: p => esc(p.codigo) },
             { titulo: 'Establecimiento', valor: p => esc(p.establecimiento) },
             { titulo: 'Tipo', valor: p => `${p.tipo_prenda ? esc(p.tipo_prenda) : '<span class="muted">Sin tipo</span>'}${p.tipo_tela ? `<span class="sub">Tela: ${esc(p.tipo_tela)}</span>` : ''}` },
-            { titulo: 'Producto', valor: p => `<strong>${esc(p.nombre)}</strong>${p.observaciones ? `<span class="sub">${esc(p.observaciones)}</span>` : ''}` },
+            { titulo: 'Producto', valor: p => `<strong>${esc(p.nombre)}</strong>${p.componentes.length ? `<span class="sub">Conjunto: ${p.componentes.map(c => esc(c.nombre)).join(' + ')}</span>` : ''}${p.observaciones ? `<span class="sub">${esc(p.observaciones)}</span>` : ''}` },
             { titulo: 'Año', valor: p => p.anio ?? '—' },
             { titulo: 'Precios', valor: p => p.precios.map(g => `<span class="pill pill-gray">${esc(g.grupo)}: ${fmtCLP(g.precio)}</span>`).join(' ') },
             { titulo: '', clase: 'acciones', valor: p => `
@@ -81,6 +81,9 @@ vistas.catalogo = {
                     <tbody></tbody>
                 </table>
                 <button type="button" class="btn btn-small" data-agregar>+ Agregar grupo de tallas</button>
+                <h3>Conjunto</h3>
+                <p class="helper-text">Si es un conjunto (ej. Buzo), marque sus partes: al venderlo se descuenta una de cada parte en la misma talla, y su stock es el de las partes.</p>
+                <div data-partes></div>
                 ${PIE_FORM()}
             </form>`);
 
@@ -97,6 +100,21 @@ vistas.catalogo = {
         form.querySelector('[data-agregar]').addEventListener('click', () => agregar());
         (producto?.precios.length ? producto.precios : [{ grupo: '', precio: '' }]).forEach(g => agregar(g.grupo, g.precio));
 
+        // Posibles partes: productos del mismo establecimiento que no son conjuntos.
+        const partes = form.querySelector('[data-partes]');
+        const elegidas = new Set((producto?.componentes ?? []).map(c => c.id));
+        const dibujarPartes = () => {
+            form.querySelectorAll('[name=componente]').forEach(c => c.checked ? elegidas.add(num(c.value)) : elegidas.delete(num(c.value)));
+            const est = num(form.establecimiento_id.value);
+            const candidatos = this.productos.filter(p =>
+                p.establecimiento_id === est && p.id !== producto?.id && !p.componentes.length);
+            partes.innerHTML = candidatos.length
+                ? candidatos.map(p => `<label class="check"><input type="checkbox" name="componente" value="${p.id}" ${elegidas.has(p.id) ? 'checked' : ''}> ${esc(p.nombre)}</label>`).join(' ')
+                : '<p class="muted">Elija un establecimiento con productos.</p>';
+        };
+        form.establecimiento_id.addEventListener('change', dibujarPartes);
+        dibujarPartes();
+
         alEnviar(form, async datos => {
             const cuerpoApi = {
                 establecimiento_id: num(datos.establecimiento_id),
@@ -107,6 +125,7 @@ vistas.catalogo = {
                 tela_principal: datos.tela_principal,
                 observaciones: datos.observaciones,
                 imagen: producto?.imagen || '',
+                componentes: [...form.querySelectorAll('[name=componente]:checked')].map(c => num(c.value)),
                 precios: [...cuerpo.rows].map(f => ({
                     grupo: f.querySelector('[name=grupo]').value,
                     precio: num(f.querySelector('[name=precio]').value),

@@ -156,6 +156,17 @@ WHERE t.nombre = CASE
 END;
 
 -- ======================================================
+-- CONJUNTOS: el Buzo se compone del Polerón y el Pantalón de Buzo
+-- del mismo establecimiento (se ajusta en Catálogo).
+-- ======================================================
+INSERT INTO producto_componentes (producto_id, componente_id)
+SELECT b.id, c.id
+FROM productos b
+JOIN productos c ON c.establecimiento_id = b.establecimiento_id
+                AND c.nombre IN ('Polerón de Buzo', 'Pantalón de Buzo')
+WHERE b.nombre ~* '^buzo';
+
+-- ======================================================
 -- TALLAS Y PRECIOS (una fila por talla)
 -- ======================================================
 INSERT INTO producto_tallas (producto_id, talla, grupo_precio, precio, orden)

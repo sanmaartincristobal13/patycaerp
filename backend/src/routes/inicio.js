@@ -115,6 +115,7 @@ router.get('/', async (req, res) => {
                 sp.stock, sp.stock_minimo, 'unidades' AS unidad
          FROM stock_prendas sp JOIN productos p ON p.id = sp.producto_id
          WHERE sp.stock_minimo IS NOT NULL AND sp.stock <= sp.stock_minimo
+           AND NOT EXISTS (SELECT 1 FROM producto_componentes pc WHERE pc.producto_id = sp.producto_id)
          UNION ALL
          SELECT 'Material', m.detalle, m.stock, m.stock_minimo, u.codigo
          FROM materiales m JOIN unidades_medida u ON u.id = m.unidad_id

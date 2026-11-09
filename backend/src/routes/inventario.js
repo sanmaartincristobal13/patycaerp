@@ -2,22 +2,23 @@
 const { Router } = require('express');
 const { query, transaccion } = require('../db');
 const { requiereModulo } = require('../lib/auth');
-const { noEncontrado } = require('../lib/errores');
+const { noEncontrado, solicitudInvalida } = require('../lib/errores');
 const { moverStockMaterial, moverStockPrenda, registrarActividad } = require('../lib/registro');
 const v = require('../lib/validar');
 
 const router = Router();
 
 // GET /api/inventario/prendas -> stock de cada producto/talla (null = sin conteo)
+// Los conjuntos (Buzo) muestran el stock calculado desde sus partes.
 router.get('/prendas', async (req, res) => {
     const { rows } = await query(
         `SELECT pt.producto_id, p.codigo AS producto_codigo, p.nombre AS producto,
                 e.nombre AS establecimiento, pt.talla, pt.precio,
-                sp.stock, sp.stock_minimo, sp.stock_objetivo
+                sp.stock, sp.stock_minimo, sp.stock_objetivo, sp.es_conjunto
          FROM producto_tallas pt
          JOIN productos p ON p.id = pt.producto_id
          JOIN establecimientos e ON e.id = p.establecimiento_id
-         LEFT JOIN stock_prendas sp ON sp.producto_id = pt.producto_id AND sp.talla = pt.talla
+         JOIN v_stock_prendas sp ON sp.producto_id = pt.producto_id AND sp.talla = pt.talla
          WHERE p.activo
          ORDER BY e.nombre, p.nombre, pt.orden`
     );
@@ -32,6 +33,9 @@ router.put('/prendas/:productoId/:talla', requiereModulo('inventario'), async (r
     const stock = v.numero(req.body.stock, 'stock', { min: 0, entero: true });
 
     await transaccion(async client => {
+        const { rows: partes } = await client.query(
+            'SELECT 1 FROM producto_componentes WHERE producto_id = $1 LIMIT 1', [productoId]);
+        if (partes[0]) throw solicitudInvalida('Un conjunto no se cuenta: cuente cada una de sus partes.');
         const { rows } = await client.query(
             'SELECT stock FROM stock_prendas WHERE producto_id = $1 AND talla = $2',
             [productoId, talla]

@@ -157,6 +157,16 @@ CREATE TABLE producto_tallas (
     PRIMARY KEY (producto_id, talla)
 );
 
+-- Conjuntos (ej. Buzo = Polerón de Buzo + Pantalón de Buzo): el conjunto
+-- no tiene stock propio. Al venderlo se descuenta una unidad de cada parte
+-- en la misma talla, y su stock disponible es el menor entre sus partes.
+CREATE TABLE producto_componentes (
+    producto_id    integer NOT NULL REFERENCES productos(id) ON DELETE CASCADE,   -- el conjunto
+    componente_id  integer NOT NULL REFERENCES productos(id) ON DELETE CASCADE,   -- una de sus partes
+    PRIMARY KEY (producto_id, componente_id),
+    CHECK (producto_id <> componente_id)
+);
+
 CREATE TABLE proveedores (
     id         integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     codigo     text NOT NULL UNIQUE,
@@ -546,6 +556,23 @@ FROM compras c
 JOIN proveedores pr ON pr.id = c.proveedor_id
 LEFT JOIN totales t ON t.compra_id = c.id
 LEFT JOIN pagos   p ON p.compra_id = c.id;
+
+-- Stock de cada producto/talla. Para un conjunto es el menor stock entre
+-- sus partes (null si alguna parte no tiene conteo).
+CREATE VIEW v_stock_prendas AS
+SELECT pt.producto_id, pt.talla,
+       CASE WHEN c.partes > 0 THEN c.stock ELSE sp.stock END AS stock,
+       sp.stock_minimo, sp.stock_objetivo,
+       c.partes > 0 AS es_conjunto
+FROM producto_tallas pt
+LEFT JOIN stock_prendas sp ON sp.producto_id = pt.producto_id AND sp.talla = pt.talla
+CROSS JOIN LATERAL (
+    SELECT count(*) AS partes,
+           CASE WHEN count(cs.stock) = count(*) THEN min(cs.stock) END AS stock
+    FROM producto_componentes pc
+    LEFT JOIN stock_prendas cs ON cs.producto_id = pc.componente_id AND cs.talla = pt.talla
+    WHERE pc.producto_id = pt.producto_id
+) c;
 
 -- Costo y rendimiento de tela por producto y talla (requiere peso y tipo de tela).
 -- Igual que la planilla de rendimiento: consumo = peso × (1 + merma).

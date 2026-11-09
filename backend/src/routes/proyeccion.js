@@ -92,7 +92,7 @@ router.get('/', async (req, res) => {
          FROM producto_tallas pt
          JOIN productos p ON p.id = pt.producto_id
          JOIN establecimientos e ON e.id = p.establecimiento_id
-         LEFT JOIN stock_prendas sp ON sp.producto_id = pt.producto_id AND sp.talla = pt.talla
+         LEFT JOIN v_stock_prendas sp ON sp.producto_id = pt.producto_id AND sp.talla = pt.talla
          LEFT JOIN v_rendimiento_tela rt ON rt.producto_id = pt.producto_id AND rt.talla = pt.talla
          WHERE p.activo AND ($1::int IS NULL OR p.establecimiento_id = $1)`,
         [establecimientoId]

@@ -84,12 +84,13 @@ vistas.inventario = {
                 coincide(`${s.establecimiento} ${s.producto} ${s.talla}`) && (!soloConteo || s.stock !== null));
             contenedor.innerHTML = tabla([
                 { titulo: 'Establecimiento', valor: s => esc(s.establecimiento) },
-                { titulo: 'Producto', valor: s => esc(s.producto) },
+                { titulo: 'Producto', valor: s => `${esc(s.producto)}${s.es_conjunto ? '<span class="sub">Conjunto: stock según sus partes</span>' : ''}` },
                 { titulo: 'Talla', valor: s => esc(s.talla) },
                 { titulo: 'Stock', clase: 'num', valor: s => `<strong>${fmtNumero(s.stock)}</strong>` },
                 { titulo: 'Mínimo', clase: 'num', valor: s => fmtNumero(s.stock_minimo) },
                 { titulo: 'Estado', valor: s => estadoStock(s.stock, s.stock_minimo) },
-                ...(acciones ? [{ titulo: '', clase: 'acciones', valor: s => `
+                // El conjunto no se cuenta ni se suma: se hace en cada parte.
+                ...(acciones ? [{ titulo: '', clase: 'acciones', valor: s => s.es_conjunto ? '' : `
                     <button class="btn btn-small btn-primary" data-sumar="${s.producto_id}|${esc(s.talla)}">+ Sumar</button>
                     <button class="btn btn-small" data-contar="${s.producto_id}|${esc(s.talla)}">Contar</button>` }] : []),
             ], filas, 'No hay prendas con este filtro.');

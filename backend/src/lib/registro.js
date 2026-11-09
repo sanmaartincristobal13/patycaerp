@@ -34,7 +34,20 @@ async function moverStockMaterial(client, { materialId, delta, tipo, referencia,
 
 // Suma "delta" al stock de una prenda (producto + talla) y lo registra.
 // Si la prenda nunca tuvo conteo, solo se permite sumar (no restar).
+// Un conjunto (ej. Buzo) no tiene stock propio: el movimiento se aplica
+// a cada una de sus partes en la misma talla.
 async function moverStockPrenda(client, { productoId, talla, delta, tipo, referencia, usuarioId }) {
+    const { rows: partes } = await client.query(
+        'SELECT componente_id FROM producto_componentes WHERE producto_id = $1 ORDER BY componente_id',
+        [productoId]
+    );
+    if (partes.length) {
+        for (const { componente_id } of partes) {
+            await moverStockPrenda(client, { productoId: componente_id, talla, delta, tipo, referencia, usuarioId });
+        }
+        return;
+    }
+
     const { rows } = await client.query(
         `SELECT sp.stock, p.nombre
          FROM producto_tallas pt

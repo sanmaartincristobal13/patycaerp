@@ -120,7 +120,13 @@ const SELECT_PRODUCTO = `
                    FROM producto_tallas WHERE producto_id = p.id
                    GROUP BY grupo_precio, precio
                ) g
-           ), '[]') AS precios
+           ), '[]') AS precios,
+           -- Partes del conjunto (vacío si es una prenda normal)
+           coalesce((
+               SELECT json_agg(json_build_object('id', c.id, 'nombre', c.nombre) ORDER BY c.nombre)
+               FROM producto_componentes pc JOIN productos c ON c.id = pc.componente_id
+               WHERE pc.producto_id = p.id
+           ), '[]') AS componentes
     FROM productos p
     JOIN establecimientos e ON e.id = p.establecimiento_id
     LEFT JOIN tipos_prenda tp ON tp.id = p.tipo_prenda_id
@@ -182,6 +188,28 @@ async function guardarTallas(client, productoId, precios) {
     );
 }
 
+// Partes de un conjunto (ej. Buzo = Polerón + Pantalón de Buzo). Una parte
+// no puede ser a su vez un conjunto, y un producto que es parte de otro no
+// puede ser conjunto. Si no se envía la lista, no se modifican.
+async function guardarComponentes(client, productoId, lista) {
+    if (lista === undefined) return;
+    if (!Array.isArray(lista)) throw solicitudInvalida('"componentes" debe ser una lista.');
+    const ids = [...new Set(lista.map(c => v.id(c, 'componentes')))];
+    if (ids.includes(productoId)) throw solicitudInvalida('Un producto no puede ser parte de sí mismo.');
+    if (ids.length) {
+        const { rows } = await client.query(
+            `SELECT 1 FROM producto_componentes
+             WHERE producto_id = ANY($1) OR componente_id = $2 LIMIT 1`,
+            [ids, productoId]
+        );
+        if (rows[0]) throw solicitudInvalida('Un conjunto no puede contener otro conjunto.');
+    }
+    await client.query('DELETE FROM producto_componentes WHERE producto_id = $1', [productoId]);
+    for (const id of ids) {
+        await client.query('INSERT INTO producto_componentes (producto_id, componente_id) VALUES ($1, $2)', [productoId, id]);
+    }
+}
+
 function datosProducto(b) {
     return [
         v.id(b.establecimiento_id, 'establecimiento_id'),
@@ -204,6 +232,7 @@ router.post('/productos', requiereModulo('catalogo'), async (req, res) => {
             [codigo, ...datosProducto(req.body)]
         );
         await guardarTallas(client, rows[0].id, req.body.precios);
+        await guardarComponentes(client, rows[0].id, req.body.componentes);
         return rows[0].id;
     });
     const { rows } = await query(`${SELECT_PRODUCTO} WHERE p.id = $1`, [id]);
@@ -221,6 +250,7 @@ router.put('/productos/:id', requiereModulo('catalogo'), async (req, res) => {
         );
         if (!rowCount) throw noEncontrado('Producto');
         await guardarTallas(client, id, req.body.precios);
+        await guardarComponentes(client, id, req.body.componentes);
     });
     const { rows } = await query(`${SELECT_PRODUCTO} WHERE p.id = $1`, [id]);
     res.json(rows[0]);
