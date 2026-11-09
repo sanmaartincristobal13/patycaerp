@@ -89,8 +89,10 @@ vistas.inventario = {
                 { titulo: 'Stock', clase: 'num', valor: s => `<strong>${fmtNumero(s.stock)}</strong>` },
                 { titulo: 'Mínimo', clase: 'num', valor: s => fmtNumero(s.stock_minimo) },
                 { titulo: 'Estado', valor: s => estadoStock(s.stock, s.stock_minimo) },
-                // El conjunto no se cuenta ni se suma: se hace en cada parte.
-                ...(acciones ? [{ titulo: '', clase: 'acciones', valor: s => s.es_conjunto ? '' : `
+                // Conjunto (Buzo): sumar buzos completos suma a cada parte; el conteo se hace en cada parte.
+                ...(acciones ? [{ titulo: '', clase: 'acciones', valor: s => s.es_conjunto ? `
+                    <button class="btn btn-small btn-primary" data-sumar="${s.producto_id}|${esc(s.talla)}">+ Sumar buzos</button>
+                    <span class="sub">Se cuenta en sus partes</span>` : `
                     <button class="btn btn-small btn-primary" data-sumar="${s.producto_id}|${esc(s.talla)}">+ Sumar</button>
                     <button class="btn btn-small" data-contar="${s.producto_id}|${esc(s.talla)}">Contar</button>` }] : []),
             ], filas, 'No hay prendas con este filtro.');
@@ -192,18 +194,23 @@ vistas.inventario = {
 
     // Suma rápida: solo pide cuánto llegó y muestra en cuánto queda el stock.
     sumar(item, tipo) {
-        const unidad = tipo === 'prenda' ? 'unidades' : item.unidad;
+        const conjunto = tipo === 'prenda' && item.es_conjunto;
+        const unidad = conjunto ? 'buzos completos' : tipo === 'prenda' ? 'unidades' : item.unidad;
         const actual = Number(item.stock || 0);
-        const caja = modal.abrir('Sumar al stock', `
+        // En un conjunto la suma se aplica a cada parte (ej. 10 buzos = +10 polerones y +10 pantalones).
+        const texto = n => conjunto
+            ? `Se suman ${fmtNumero(n)} a cada parte (polerón y pantalón de buzo, talla ${item.talla}).`
+            : `Quedará en ${fmtNumero(actual + n)} ${unidad}.`;
+        const caja = modal.abrir(conjunto ? 'Sumar buzos completos' : 'Sumar al stock', `
             <form>
                 <p class="aviso">${esc(this.nombreItem(item, tipo))}<br>Stock actual: <strong>${fmtNumero(item.stock ?? 0)} ${esc(unidad)}</strong></p>
                 ${campo(`Cantidad a sumar (${unidad})`, `<input type="number" name="cantidad" min="${tipo === 'prenda' ? 1 : 0.001}" step="${tipo === 'prenda' ? 1 : 'any'}" required>`)}
-                <p class="helper-text" data-queda>Quedará en ${fmtNumero(actual)} ${esc(unidad)}.</p>
+                <p class="helper-text" data-queda>${esc(texto(0))}</p>
                 ${PIE_FORM('Sumar')}
             </form>`);
         const form = caja.querySelector('form');
         form.cantidad.addEventListener('input', () => {
-            form.querySelector('[data-queda]').textContent = `Quedará en ${fmtNumero(actual + (num(form.cantidad.value) || 0))} ${unidad}.`;
+            form.querySelector('[data-queda]').textContent = texto(num(form.cantidad.value) || 0);
         });
         alEnviar(form, async datos => {
             const ruta = tipo === 'prenda'
