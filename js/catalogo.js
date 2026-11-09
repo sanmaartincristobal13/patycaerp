@@ -5,7 +5,8 @@
 // lista de precios de la tienda: "4-6-8" → $8.000.
 //
 // Candado: para crear, editar o quitar productos y establecimientos hay
-// que abrirlo con "Editar catálogo". Se cierra solo al salir de Catálogo.
+// que abrirlo con "Editar catálogo" (pide la contraseña del usuario).
+// Se cierra solo al salir de Catálogo.
 // ======================================================
 
 vistas.catalogo = {
@@ -17,7 +18,9 @@ vistas.catalogo = {
         document.getElementById('btnNuevoEstablecimiento').addEventListener('click', () => this.establecimientos());
         document.getElementById('catalogoFiltroEst').addEventListener('change', () => this.dibujar());
         document.getElementById('catalogoBuscar').addEventListener('input', () => this.dibujar());
-        document.getElementById('btnEditarCatalogo').addEventListener('click', () => this.cambiarEdicion(!this.edicion));
+        document.getElementById('btnEditarCatalogo').addEventListener('click', () => this.edicion
+            ? this.cambiarEdicion(false)
+            : pedirClave('Para editar el catálogo, confirme su contraseña.', () => this.cambiarEdicion(true)));
         // Al salir de Catálogo el candado vuelve a cerrarse.
         window.addEventListener('hashchange', () => { if (location.hash !== '#catalogo' && this.edicion) this.cambiarEdicion(false, false); });
         this.cambiarEdicion(false, false);

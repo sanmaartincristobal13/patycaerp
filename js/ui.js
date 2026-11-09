@@ -228,6 +228,22 @@ const PIE_FORM = (texto = 'Guardar') => `
         <button type="submit" class="btn btn-primary">${esc(texto)}</button>
     </div>`;
 
+// Pide la contraseña del usuario antes de abrir un candado de edición.
+// Si es correcta, cierra el modal y ejecuta "alConfirmar".
+function pedirClave(motivo, alConfirmar) {
+    const caja = modal.abrir('Confirmar contraseña', `
+        <form>
+            <p class="helper-text">${esc(motivo)}</p>
+            ${campo('Su contraseña', '<input type="password" name="password" required autocomplete="current-password">', 'full')}
+            ${PIE_FORM('Desbloquear')}
+        </form>`);
+    alEnviar(caja.querySelector('form'), async ({ password }) => {
+        await api.post('/auth/verificar-clave', { password });
+        modal.cerrar();
+        alConfirmar();
+    });
+}
+
 // ---------- Avisos ----------
 
 let temporizadorAviso;

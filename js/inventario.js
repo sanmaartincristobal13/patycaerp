@@ -5,7 +5,8 @@
 // manual o un conteo físico. Todo queda en "Movimientos".
 //
 // Candado: para sumar, contar o editar hay que abrirlo con el botón
-// "Editar o sumar inventario". Se cierra solo al salir de Inventario.
+// "Editar o sumar inventario" (pide la contraseña del usuario).
+// Se cierra solo al salir de Inventario.
 // ======================================================
 
 vistas.inventario = {
@@ -23,7 +24,9 @@ vistas.inventario = {
         document.getElementById('inventarioBuscar').addEventListener('input', () => this.dibujar());
         document.getElementById('inventarioSoloConteo').addEventListener('change', () => this.dibujar());
         document.getElementById('btnNuevoMaterial').addEventListener('click', () => this.formularioMaterial());
-        document.getElementById('btnEditarInventario').addEventListener('click', () => this.cambiarEdicion(!this.edicion));
+        document.getElementById('btnEditarInventario').addEventListener('click', () => this.edicion
+            ? this.cambiarEdicion(false)
+            : pedirClave('Para editar o sumar inventario, confirme su contraseña.', () => this.cambiarEdicion(true)));
         // Sin permiso de inventario no hay nada que desbloquear.
         document.getElementById('btnNuevoMaterial').hidden = !puede('inventario');
         document.getElementById('btnEditarInventario').hidden = !puede('inventario');

@@ -44,4 +44,16 @@ router.get('/me', requiereSesion, async (req, res) => {
     res.json(datos);
 });
 
+// POST /api/auth/verificar-clave  { password }  -> confirma la contraseña del usuario
+// de la sesión (para abrir el candado de edición). Responde 400 y no 401 si no
+// coincide, para que el front no cierre la sesión.
+router.post('/verificar-clave', requiereSesion, async (req, res) => {
+    const password = v.texto(req.body.password, 'password');
+    const usuario = await buscarUsuario('u.id', req.usuario.id);
+    if (!usuario || !(await bcrypt.compare(password, usuario.password_hash))) {
+        throw new HttpError(400, 'Contraseña incorrecta.');
+    }
+    res.json({ ok: true });
+});
+
 module.exports = router;
