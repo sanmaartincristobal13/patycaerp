@@ -21,7 +21,7 @@ vistas.proyeccion = {
             ${campo('Crecimiento anual (%)', '<input type="number" name="crecimiento" step="0.5"><p class="helper-text" data-base></p>')}
             ${campo('Ajuste de precios (%)', '<input type="number" name="precios" step="1" value="0"><p class="helper-text">Ej: 5 = subir precios 5%</p>')}
             ${campo('Ajuste de demanda (%)', '<input type="number" name="demanda" step="1" value="0"><p class="helper-text">Ej: 20 = nuevo convenio</p>')}
-            <div class="field"><button type="button" class="btn" data-restablecer>Restablecer</button></div>`;
+            <div class="field"><label>&nbsp;</label><button type="button" class="btn" data-restablecer>Restablecer</button></div>`;
 
         const controles = document.getElementById('simControles');
         controles.querySelector('[name=establecimiento_id]').addEventListener('change', () => this.cargar());

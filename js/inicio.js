@@ -127,7 +127,7 @@ vistas.inicio = {
                 if (!mes) return;
                 // Con permiso de finanzas: resumen completo del mes; si no, el resumen de ventas del mes.
                 if (puede('finanzas')) vistas.resumen.abrir(mes.slice(0, 7));
-                else vistas.ventas.abrirResumenMes(mes.slice(0, 7));
+                else vistas['resumen-ventas'].abrirMes(mes.slice(0, 7));
             } : null,
             extra: i => {
                 if (i <= ultimo && hayVentas && hayEgresos) {

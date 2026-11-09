@@ -17,9 +17,10 @@
 
 BEGIN;
 
+-- ---------- Tabla y vista (iguales a schema.sql) ----------
 CREATE TABLE IF NOT EXISTS producto_componentes (
-    producto_id    integer NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
-    componente_id  integer NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+    producto_id    integer NOT NULL REFERENCES productos(id) ON DELETE CASCADE,   -- el conjunto
+    componente_id  integer NOT NULL REFERENCES productos(id) ON DELETE CASCADE,   -- una de sus partes
     PRIMARY KEY (producto_id, componente_id),
     CHECK (producto_id <> componente_id)
 );
@@ -39,7 +40,7 @@ CROSS JOIN LATERAL (
     WHERE pc.producto_id = pt.producto_id
 ) c;
 
--- Buzo de cada establecimiento = su Polerón de Buzo + Pantalón de Buzo.
+-- ---------- Buzo de cada establecimiento = su Polerón de Buzo + Pantalón de Buzo ----------
 INSERT INTO producto_componentes (producto_id, componente_id)
 SELECT b.id, c.id
 FROM productos b
@@ -48,13 +49,19 @@ JOIN productos c ON c.establecimiento_id = b.establecimiento_id
 WHERE b.nombre ~* '^buzo'
 ON CONFLICT DO NOTHING;
 
--- Buzos completos ya contados: se suman a cada parte (con registro en el kárdex).
+-- ---------- Buzos completos ya contados: pasan a cada parte (con registro en el kárdex) ----------
+-- Solo las tallas que existen en todas las partes; si a una parte le falta
+-- la talla, ese stock queda en el buzo para revisarlo a mano.
 CREATE TEMP TABLE traspaso ON COMMIT DROP AS
 SELECT pc.componente_id, sp.talla, sp.stock, sp.producto_id AS conjunto_id
 FROM stock_prendas sp
 JOIN producto_componentes pc ON pc.producto_id = sp.producto_id
-JOIN producto_tallas pt ON pt.producto_id = pc.componente_id AND pt.talla = sp.talla
-WHERE sp.stock > 0;
+WHERE sp.stock > 0
+  AND NOT EXISTS (
+      SELECT 1 FROM producto_componentes falta
+      WHERE falta.producto_id = sp.producto_id
+        AND NOT EXISTS (SELECT 1 FROM producto_tallas pt
+                        WHERE pt.producto_id = falta.componente_id AND pt.talla = sp.talla));
 
 INSERT INTO stock_prendas (producto_id, talla, stock)
 SELECT componente_id, talla, 0 FROM traspaso

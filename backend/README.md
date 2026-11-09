@@ -67,6 +67,7 @@ backend/
 ## Flujos principales
 
 - **Venta al mesón**: se descuenta el stock al registrarla. Si el cliente paga una parte, el resto queda por cobrar.
+- **Conjuntos (Buzo)**: un producto puede componerse de otros (tabla `producto_componentes`, se marca en Catálogo → Conjunto). Ej.: Buzo = Polerón de Buzo + Pantalón de Buzo. El conjunto no tiene stock propio: al venderlo, reservarlo, anularlo o terminar su orden de taller, el movimiento se aplica a cada parte en la misma talla (`moverStockPrenda`). Su stock disponible es el menor entre sus partes (vista `v_stock_prendas`), así se vende aunque no exista conteo de "buzo completo". En Inventario el conjunto no se cuenta ni se suma: se hace en cada parte. Bases creadas antes: ejecutar `db/migracion-conjuntos.sql` (une cada Buzo con sus partes, pasa a las partes los buzos completos contados; no borra datos y se puede repetir).
 - **Encargo**: requiere nombre del cliente y queda "Por entregar" con su abono. **Al registrarlo se descuenta y reserva el stock disponible** (`venta_items.cantidad_reservada`, kárdex "Reserva de encargo"), así el stock muestra lo que realmente queda libre. Lo que falta se envía al taller (`enviar_taller: true` o desde su detalle; no se permite duplicar una orden abierta). Cuando el taller termina una orden del encargo, las prendas entran al stock y se reservan de inmediato para el cliente. Con todo reservado queda "Listo para retirar" (pendientes de Inicio). Al entregar no se mueve stock (salvo lo que faltara); al anular, lo reservado vuelve ("Liberación de reserva").
 - **Producción**: Pendiente → En proceso → Terminada. Cada orden tiene fecha de entrega (si viene de un encargo, hereda la fecha de retiro). Se marca "Atrasada" o "Por vencer" según los días de aviso de Configuración. Al terminar, las prendas entran al stock y, si existe ficha de materiales, se descuentan los materiales.
 - **Reposición** (`/inventario/reposicion`): sugiere cuánto comprar de cada material = stock objetivo (o mínimo) + lo que piden las órdenes abiertas según su ficha − stock actual. No compra nada por sí sola.
@@ -92,6 +93,8 @@ erDiagram
     establecimientos ||--o{ productos : agrupa
     productos ||--|{ producto_tallas : "precio por talla"
     producto_tallas ||--o| stock_prendas : stock
+    productos ||--o{ producto_componentes : "conjunto de"
+    productos ||--o{ producto_componentes : "parte de"
     producto_tallas ||--o| fichas_tecnicas : ficha
     fichas_tecnicas ||--o{ ficha_materiales : consume
     materiales ||--o{ ficha_materiales : ""

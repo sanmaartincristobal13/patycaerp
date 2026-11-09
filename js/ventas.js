@@ -33,27 +33,11 @@ vistas.ventas = {
         await this.armarCarrito();
     },
 
-    // Abre Ventas → Resumen en la vista de un mes ("YYYY-MM").
-    // Lo usan el gráfico de Inicio y Resumen mensual.
-    abrirResumenMes(mes) {
-        resumenVentas.modo = 'mes';
-        resumenVentas.mes = mes;
-        this.pestana = 'resumen';
-        if (location.hash === '#ventas') this.cargar();
-        else location.hash = 'ventas';
-    },
-
     async cargar() {
         document.querySelectorAll('#view-ventas .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === this.pestana));
         document.getElementById('ventasPos').hidden = this.pestana !== 'vender';
         document.getElementById('ventasHistorial').hidden = this.pestana !== 'historial';
         document.getElementById('ventasTotales').hidden = this.pestana !== 'totales';
-        document.getElementById('ventasResumen').hidden = this.pestana !== 'resumen';
-
-        if (this.pestana === 'resumen') {
-            await resumenVentas.cargar();
-            return;
-        }
 
         if (this.pestana === 'totales') {
             await this.dibujarTotales();

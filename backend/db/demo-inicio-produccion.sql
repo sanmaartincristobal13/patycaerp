@@ -76,10 +76,17 @@ $$ SELECT id FROM categorias_gasto WHERE nombre = p_nombre $$;
 
 -- Mueve stock de una prenda y lo anota en el kárdex.
 -- Si no alcanza, primero registra un conteo (ajuste manual) por la diferencia.
+-- Un conjunto (Buzo) no tiene stock propio: se mueve cada una de sus partes.
 CREATE OR REPLACE FUNCTION pg_temp.mover_prenda(p_prod integer, p_talla text, p_delta integer,
                                      p_tipo text, p_ref text, p_fecha date) RETURNS void LANGUAGE plpgsql AS $$
-DECLARE s integer;
+DECLARE s integer; parte integer;
 BEGIN
+    IF EXISTS (SELECT 1 FROM producto_componentes WHERE producto_id = p_prod) THEN
+        FOR parte IN SELECT componente_id FROM producto_componentes WHERE producto_id = p_prod ORDER BY componente_id LOOP
+            PERFORM pg_temp.mover_prenda(parte, p_talla, p_delta, p_tipo, p_ref, p_fecha);
+        END LOOP;
+        RETURN;
+    END IF;
     INSERT INTO stock_prendas (producto_id, talla, stock) VALUES (p_prod, p_talla, 0) ON CONFLICT DO NOTHING;
     SELECT stock INTO s FROM stock_prendas WHERE producto_id = p_prod AND talla = p_talla FOR UPDATE;
     IF s + p_delta < 0 THEN
@@ -103,10 +110,12 @@ BEGIN
 END $$;
 
 -- Conteo físico inicial de una prenda: solo si esa talla no tenía stock registrado.
+-- Los conjuntos no se cuentan (se cuentan sus partes).
 CREATE OR REPLACE FUNCTION pg_temp.conteo_prenda(p_codigo text, p_talla text, p_stock integer, p_minimo integer)
 RETURNS void LANGUAGE plpgsql AS $$
 DECLARE pid integer := pg_temp.prod(p_codigo);
 BEGIN
+    IF EXISTS (SELECT 1 FROM producto_componentes WHERE producto_id = pid) THEN RETURN; END IF;
     IF NOT EXISTS (SELECT 1 FROM stock_prendas WHERE producto_id = pid AND talla = p_talla) AND p_stock > 0 THEN
         PERFORM pg_temp.mover_prenda(pid, p_talla, p_stock, 'Ajuste manual', 'DEMO-CONTEO', current_date - 35);
     END IF;
@@ -255,13 +264,12 @@ BEGIN
         ('PR001','4',6,3), ('PR001','6',8,3), ('PR001','8',4,4), ('PR001','10',14,4), ('PR001','12',9,4),
         ('PR001','14',5,3), ('PR001','16',2,3), ('PR001','S',4,2),
         ('PR002','10',6,2), ('PR002','12',4,2),
-        ('PR005','10',3,2), ('PR005','12',2,2),
         ('PR006','10',6,3), ('PR006','12',1,3), ('PR006','14',2,3),
-        ('PR007','10',7,3), ('PR007','12',6,3),
+        ('PR007','10',7,3), ('PR007','12',6,3), ('PR007','14',2,2),
         ('PR008','10',3,2), ('PR008','12',2,2),
         ('PR011','8',8,3), ('PR011','10',10,3), ('PR011','12',3,3), ('PR011','14',4,3),
-        ('PR015','10',2,1), ('PR015','12',2,1),
         ('PR016','10',4,2), ('PR016','12',4,2), ('PR016','14',1,2),
+        ('PR017','10',5,2), ('PR017','12',3,2),
         ('PR018','10',9,3), ('PR018','S',5,2),
         ('PR023','M',6,2), ('PR023','L',4,2), ('PR024','M',5,2),
         ('PR028','10',6,2), ('PR028','12',5,2), ('PR029','42',3,1)

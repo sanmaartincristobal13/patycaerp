@@ -22,7 +22,7 @@ vistas.resumen = {
             this.mes = nuevo;
             this.cargar();
         }));
-        document.getElementById('resumenVerVentas').addEventListener('click', () => vistas.ventas.abrirResumenMes(this.mes));
+        document.getElementById('resumenVerVentas').addEventListener('click', () => vistas['resumen-ventas'].abrirMes(this.mes));
     },
 
     // Abre la vista en un mes dado (lo usa el gráfico de Inicio).

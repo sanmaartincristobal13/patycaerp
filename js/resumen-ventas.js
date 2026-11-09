@@ -1,5 +1,5 @@
 // ======================================================
-// VENTAS → RESUMEN DÍA / MES (métricas de gestión)
+// RESUMEN DE VENTAS - DÍA / MES (métricas de gestión, grupo Finanzas)
 // ======================================================
 // Día: cuánto entró a caja, cuántas ventas y por qué medio de pago.
 // Mes: ingresos brutos y netos, recaudado, producto más vendido,
@@ -10,16 +10,22 @@
 //   Vendido   = ventas registradas, cobradas o no. Montos con IVA.
 // ======================================================
 
-const resumenVentas = {
+vistas['resumen-ventas'] = {
 
     modo: 'dia',
     fecha: null,     // "YYYY-MM-DD"
     mes: null,       // "YYYY-MM"
     datos: null,     // último resumen cargado (para exportar)
-    iniciado: false,
+
+    // Abre la vista en un mes ("YYYY-MM"). Lo usan el gráfico de Inicio y Resumen mensual.
+    abrirMes(mes) {
+        this.modo = 'mes';
+        this.mes = mes;
+        if (location.hash === '#resumen-ventas') this.cargar();
+        else location.hash = 'resumen-ventas';
+    },
 
     iniciar() {
-        this.iniciado = true;
         const inputDia = document.getElementById('resVentasFecha');
         const inputMes = document.getElementById('resVentasMes');
         inputDia.max = hoy();
@@ -32,7 +38,7 @@ const resumenVentas = {
             document.querySelectorAll('#resVentasModo [data-modo]').forEach(x => x.classList.toggle('active', x === b));
             this.cargar();
         }));
-        document.querySelectorAll('#ventasResumen [data-res-paso]').forEach(b => b.addEventListener('click', () => {
+        document.querySelectorAll('#view-resumen-ventas [data-res-paso]').forEach(b => b.addEventListener('click', () => {
             this.mover(Number(b.dataset.resPaso));
         }));
         document.getElementById('resVentasCsv').addEventListener('click', () => this.exportarCsv());
@@ -58,7 +64,6 @@ const resumenVentas = {
     },
 
     async cargar() {
-        if (!this.iniciado) this.iniciar();
         this.fecha ??= hoy();
         this.mes ??= hoy().slice(0, 7);
         const esDia = this.modo === 'dia';
@@ -69,7 +74,7 @@ const resumenVentas = {
         inputDia.value = this.fecha;
         inputMes.value = this.mes;
         document.querySelectorAll('#resVentasModo [data-modo]').forEach(b => b.classList.toggle('active', b.dataset.modo === this.modo));
-        document.querySelector('#ventasResumen [data-res-paso="1"]').disabled =
+        document.querySelector('#view-resumen-ventas [data-res-paso="1"]').disabled =
             esDia ? this.fecha >= hoy() : this.mes >= hoy().slice(0, 7);
 
         if (esDia) {
@@ -234,7 +239,7 @@ const resumenVentas = {
         contenido.querySelectorAll('[data-ver-mes]').forEach(b => b.addEventListener('click', () => {
             this.mes = b.dataset.verMes;
             this.cargar();
-            document.getElementById('ventasResumen').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('view-resumen-ventas').scrollIntoView({ behavior: 'smooth' });
         }));
         contenido.querySelectorAll('[data-borrar-mes]').forEach(b => b.addEventListener('click', () => this.eliminarMes(b.dataset.borrarMes, b.dataset.cantidad)));
     },

@@ -121,12 +121,16 @@ async function cargarCatalogoDemo() {
     for (const e of establecimientos) {
         if (productos.some(p => p.establecimiento_id === e.id)) continue;
         const linea = /jard[ií]n/i.test(e.nombre) ? LINEA_JARDIN : LINEA_BASICA;
+        const ids = {};
         for (const [nombre, tipoNombre, precios] of linea) {
-            await api('POST', '/productos', {
+            const creado = await api('POST', '/productos', {
                 establecimiento_id: e.id, tipo_prenda_id: tipo(tipoNombre), nombre, anio: new Date().getFullYear(),
                 observaciones: 'Precio de prueba: reemplazar por la lista real',
                 precios: Object.entries(precios).map(([grupo, precio]) => ({ grupo, precio })),
+                // El Buzo es conjunto del Polerón y el Pantalón de Buzo (creados antes en la línea).
+                componentes: /^buzo/i.test(nombre) ? [ids['Polerón de Buzo'], ids['Pantalón de Buzo']] : [],
             });
+            ids[nombre] = creado.id;
             creados++;
         }
     }
@@ -175,13 +179,13 @@ async function main() {
         ['PR001', '4', 6, 3], ['PR001', '6', 8, 3], ['PR001', '8', 10, 4], ['PR001', '10', 12, 4],
         ['PR001', '12', 9, 4], ['PR001', '14', 5, 3], ['PR001', '16', 2, 3], ['PR001', 'S', 4, 2], ['PR001', 'M', 3, 2],
         ['PR002', '8', 5, 2], ['PR002', '10', 6, 2], ['PR002', '12', 4, 2],
-        ['PR005', '8', 3, 2], ['PR005', '10', 4, 2], ['PR005', '12', 2, 2],
-        ['PR006', '10', 6, 3], ['PR006', '12', 5, 3], ['PR006', '14', 1, 3],
-        ['PR007', '10', 7, 3], ['PR007', '12', 6, 3],
+        // El Buzo (PR005, PR015) es conjunto: se cuentan sus partes, polerón y pantalón.
+        ['PR006', '8', 3, 2], ['PR006', '10', 6, 3], ['PR006', '12', 5, 3], ['PR006', '14', 1, 3],
+        ['PR007', '8', 3, 2], ['PR007', '10', 7, 3], ['PR007', '12', 6, 3], ['PR007', '14', 1, 2],
         ['PR008', '8', 3, 2], ['PR008', '12', 2, 2],
         ['PR011', '8', 8, 3], ['PR011', '10', 10, 3], ['PR011', '12', 7, 3], ['PR011', '14', 4, 3],
-        ['PR015', '10', 2, 1], ['PR015', '14', 1, 1],
-        ['PR016', '12', 4, 2], ['PR018', '10', 9, 3], ['PR018', 'S', 5, 2],
+        ['PR016', '10', 2, 1], ['PR016', '12', 4, 2], ['PR016', '14', 1, 1],
+        ['PR017', '10', 2, 1], ['PR017', '14', 1, 1], ['PR018', '10', 9, 3], ['PR018', 'S', 5, 2],
         ['PR023', 'M', 6, 2], ['PR023', 'L', 4, 2], ['PR024', 'M', 5, 2],
         ['PR028', '10', 6, 2], ['PR028', '12', 5, 2], ['PR029', '42', 3, 1], ['PR029', '44', 2, 1],
     ];
