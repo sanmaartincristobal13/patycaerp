@@ -2,8 +2,9 @@
 // COTIZACIONES
 // ======================================================
 // Cotización para un colegio, institución o empresa:
-// ítems libres (producto, cantidad, característica y precio NETO),
-// totales con IVA y PDF listo para enviar (js/cotizacion-pdf.js).
+// ítems libres (producto, cantidad, característica y precio con IVA,
+// igual al catálogo), total desglosado en neto + IVA y PDF listo
+// para enviar (js/cotizacion-pdf.js).
 // ======================================================
 
 const ESTADOS_COTIZACION = ['Borrador', 'Enviada', 'Aceptada', 'Rechazada'];
@@ -72,7 +73,7 @@ vistas.cotizaciones = {
 
     // Crear o editar. Al guardar puede abrir el PDF de inmediato.
     // Producto: se elige del catálogo ("Polera Polo M/C · Escuela Numpay"), lo que
-    // habilita la talla y propone el precio de lista sin IVA; o se escribe libre
+    // habilita la talla y propone el precio de lista (con IVA); o se escribe libre
     // (ej. "Poleras dry-fit" para una institución). También sugiere los productos
     // libres usados en cotizaciones anteriores.
     async formulario(cot = null) {
@@ -83,7 +84,6 @@ vistas.cotizaciones = {
             .filter(s => s && !porEtiqueta.has(s))
             .sort((a, b) => a.localeCompare(b, 'es'));
         const sugerencias = [...[...porEtiqueta.keys()].sort((a, b) => a.localeCompare(b, 'es')), ...libres];
-        const netoDeLista = precio => Math.round(precio / (1 + IVA_COTIZACION));
 
         const caja = modal.abrir(cot ? `Editar ${cot.codigo}` : 'Nueva cotización', `
             <form>
@@ -95,7 +95,7 @@ vistas.cotizaciones = {
                 <table class="lineas lineas-cotizacion">
                     <thead><tr>
                         <th>Producto (del catálogo o libre)</th><th style="width:80px">Talla</th><th style="width:90px">Cantidad</th><th>Característica</th>
-                        <th style="width:120px">P. unitario neto</th><th style="width:110px" class="num">Total</th><th style="width:30px"></th>
+                        <th style="width:120px">P. unitario (IVA incl.)</th><th style="width:110px" class="num">Total</th><th style="width:30px"></th>
                     </tr></thead>
                     <tbody></tbody>
                 </table>
@@ -118,23 +118,24 @@ vistas.cotizaciones = {
         const cuerpo = form.querySelector('tbody');
         const valor = (fila, nombre) => fila.querySelector(`[name=${nombre}]`).value;
 
+        // Los precios incluyen IVA: el total es la suma y de ahí se separa el neto (igual que v_cotizaciones).
         const recalcular = () => {
-            let neto = 0;
+            let total = 0;
             [...cuerpo.rows].forEach(f => {
-                const total = (num(valor(f, 'cantidad')) || 0) * (num(valor(f, 'precio')) || 0);
-                f.querySelector('[data-total-fila]').textContent = fmtCLP(total);
-                neto += total;
+                const totalFila = (num(valor(f, 'cantidad')) || 0) * (num(valor(f, 'precio')) || 0);
+                f.querySelector('[data-total-fila]').textContent = fmtCLP(totalFila);
+                total += totalFila;
             });
-            const iva = Math.round(neto * IVA_COTIZACION);
+            const neto = Math.round(total / (1 + IVA_COTIZACION));
             form.querySelector('[data-neto]').textContent = fmtCLP(neto);
-            form.querySelector('[data-iva]').textContent = fmtCLP(iva);
-            form.querySelector('[data-total]').textContent = fmtCLP(neto + iva);
+            form.querySelector('[data-iva]').textContent = fmtCLP(total - neto);
+            form.querySelector('[data-total]').textContent = fmtCLP(total);
         };
 
         // Producto del catálogo que corresponde a lo escrito en la fila (o null si es libre).
         const productoDe = fila => porEtiqueta.get(valor(fila, 'producto').trim()) || null;
 
-        // Llena las tallas del producto elegido y propone el precio neto de esa talla.
+        // Llena las tallas del producto elegido y propone el precio de lista de esa talla.
         const elegirProducto = (fila, tallaElegida = null, conservarPrecio = false) => {
             const p = productoDe(fila);
             const select = fila.querySelector('[name=talla]');
@@ -144,7 +145,7 @@ vistas.cotizaciones = {
             select.title = p ? '' : 'Solo para productos del catálogo';
             if (p && !conservarPrecio) {
                 const t = tallas.find(x => x.talla === select.value);
-                if (t) fila.querySelector('[name=precio]').value = netoDeLista(t.precio);
+                if (t) fila.querySelector('[name=precio]').value = t.precio;
             }
             recalcular();
         };

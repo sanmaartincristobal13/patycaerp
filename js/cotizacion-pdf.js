@@ -5,8 +5,8 @@
 // solo la primera vez que se pide un PDF). Bloques:
 //   1. Encabezado: título, lema y datos del emisor (Configuración).
 //   2. Cliente: SEÑORES.
-//   3. Detalle: Producto | Cantidad | Característica | P. Unitario | Total $.
-//   4. Totales: NETO, IVA (19 %) y TOTAL.
+//   3. Detalle: Producto | Cantidad | Característica | P. Unitario (con IVA) | Total $.
+//   4. Totales: NETO, IVA (19 %) y TOTAL (el total es la suma del detalle).
 //   5. Cierre, firma (imagen) y nombre del responsable.
 // ======================================================
 
@@ -136,7 +136,7 @@ const cotizacionPdf = (() => {
         globalThis.autoTable(doc, {
             startY: y,
             margin: { left: m, right: m },
-            head: [['Producto', 'Cantidad', 'Característica', 'P. Unitario', 'Total $']],
+            head: [['Producto', 'Cantidad', 'Característica', 'P. Unit. IVA incl.', 'Total $']],
             body: cot.items.map(i => [
                 i.producto, fmtNumero(i.cantidad), i.caracteristica || '',
                 pesos(i.precio_unitario), pesos(i.total),

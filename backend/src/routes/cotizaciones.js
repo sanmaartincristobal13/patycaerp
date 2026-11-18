@@ -1,5 +1,6 @@
 // Cotizaciones y su conversión a venta.
-// Los precios de una cotización son NETOS; v_cotizaciones calcula neto, IVA y total.
+// Los precios de una cotización incluyen IVA (iguales al catálogo);
+// v_cotizaciones separa neto e IVA del total.
 // Un ítem puede ser un producto del catálogo (producto_id + talla) o texto libre
 // (descripcion + caracteristica), por ejemplo para instituciones o empresas.
 const { Router } = require('express');
@@ -12,7 +13,6 @@ const v = require('../lib/validar');
 const router = Router();
 
 const ESTADOS = ['Borrador', 'Enviada', 'Aceptada', 'Rechazada'];
-const IVA = 0.19;
 
 const SELECT_COTIZACION = `
     SELECT c.*, u.nombre AS usuario,
@@ -93,12 +93,12 @@ async function guardarItems(client, cotizacionId, items) {
             );
             continue;
         }
-        // Sin precio indicado se usa el de la lista (que incluye IVA) llevado a neto.
+        // Sin precio indicado se usa el de la lista.
         const { rowCount } = await client.query(
             `INSERT INTO cotizacion_items (cotizacion_id, producto_id, talla, descripcion, caracteristica, cantidad, precio_unitario)
-             SELECT $1, producto_id, talla, $4, $5, $6, coalesce($7, round(precio / (1 + $8::numeric)))
+             SELECT $1, producto_id, talla, $4, $5, $6, coalesce($7, precio)
              FROM producto_tallas WHERE producto_id = $2 AND talla = $3`,
-            [cotizacionId, i.producto_id, i.talla, i.descripcion, i.caracteristica, i.cantidad, i.precio_unitario, IVA]
+            [cotizacionId, i.producto_id, i.talla, i.descripcion, i.caracteristica, i.cantidad, i.precio_unitario]
         );
         if (!rowCount) throw solicitudInvalida(`El producto ${i.producto_id} no tiene la talla ${i.talla}.`);
     }
@@ -175,13 +175,12 @@ router.post('/:id/venta', async (req, res) => {
             throw new HttpError(409, 'Solo se pueden convertir en venta cotizaciones con productos del catálogo (con talla). Registre la venta desde Ventas.');
         }
         const pago = req.body?.pago_inicial;
-        // La venta guarda precios con IVA incluido; la cotización, netos.
-        const bruto = n => Math.round(Number(n) * (1 + IVA));
+        // Venta y cotización guardan los mismos precios (con IVA).
         const ventaId = await crearVenta(client, req.usuario.id, {
             fecha: null,
-            descuento: bruto(cot.descuento),
+            descuento: Number(cot.descuento),
             observacion: `Generada desde ${cot.codigo}`,
-            items: cot.items.map(i => ({ ...i, precio_unitario: bruto(i.precio_unitario) })),
+            items: cot.items.map(i => ({ ...i, precio_unitario: Number(i.precio_unitario) })),
             cotizacionId: id,
             pagoInicial: pago?.monto
                 ? { monto: v.numero(pago.monto, 'monto', { min: 1, entero: true }), medio_pago_id: v.id(pago.medio_pago_id, 'medio_pago_id') }

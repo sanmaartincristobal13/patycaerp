@@ -3,6 +3,8 @@
 // ======================================================
 // El stock solo cambia por ventas, compras, producción, una suma
 // manual o un conteo físico. Todo queda en "Movimientos".
+// "Agregar inventario" suma de una vez todas las tallas de un producto.
+// Prendas terminadas muestra cuánto vale el stock a precio de venta.
 //
 // Candado: para sumar, contar o editar hay que abrirlo con el botón
 // "Editar o sumar inventario" (pide la contraseña del usuario).
@@ -24,11 +26,13 @@ vistas.inventario = {
         document.getElementById('inventarioBuscar').addEventListener('input', () => this.dibujar());
         document.getElementById('inventarioSoloConteo').addEventListener('change', () => this.dibujar());
         document.getElementById('btnNuevoMaterial').addEventListener('click', () => this.formularioMaterial());
+        document.getElementById('btnAgregarInventario').addEventListener('click', () => this.agregarInventario());
         document.getElementById('btnEditarInventario').addEventListener('click', () => this.edicion
             ? this.cambiarEdicion(false)
             : pedirClave('Para editar o sumar inventario, confirme su contraseña.', () => this.cambiarEdicion(true)));
         // Sin permiso de inventario no hay nada que desbloquear.
         document.getElementById('btnNuevoMaterial').hidden = !puede('inventario');
+        document.getElementById('btnAgregarInventario').hidden = !puede('inventario');
         document.getElementById('btnEditarInventario').hidden = !puede('inventario');
         // Al salir de Inventario el candado vuelve a cerrarse.
         window.addEventListener('hashchange', () => { if (location.hash !== '#inventario' && this.edicion) this.cambiarEdicion(false, false); });
@@ -41,9 +45,11 @@ vistas.inventario = {
         boton.textContent = abierto ? '🔓 Terminar edición' : '🔒 Editar o sumar inventario';
         boton.classList.toggle('activo', abierto);
         boton.setAttribute('aria-pressed', String(abierto));
-        const nuevo = document.getElementById('btnNuevoMaterial');
-        nuevo.disabled = !abierto;
-        nuevo.title = abierto ? '' : 'Primero presione «Editar o sumar inventario»';
+        for (const id of ['btnNuevoMaterial', 'btnAgregarInventario']) {
+            const b = document.getElementById(id);
+            b.disabled = !abierto;
+            b.title = abierto ? '' : 'Primero presione «Editar o sumar inventario»';
+        }
         if (redibujar) this.dibujar();
     },
 
@@ -78,6 +84,8 @@ vistas.inventario = {
             : minimo !== null && stock <= minimo ? '<span class="pill pill-red">Bajo mínimo</span>'
             : '<span class="pill pill-green">OK</span>';
         const contenedor = document.getElementById('inventarioTabla');
+        const franjaValor = document.getElementById('inventarioValor');
+        franjaValor.hidden = true;   // solo en Prendas terminadas
         this.mostrarCandado();
         // Con el candado cerrado no se muestran las acciones que modifican el stock.
         const acciones = this.edicion && puede('inventario');
@@ -87,12 +95,30 @@ vistas.inventario = {
             // que se suman y cuentan aquí. El conjunto existe solo en Catálogo y en la venta.
             const filas = this.datos.filter(s => !s.es_conjunto &&
                 coincide(`${s.establecimiento} ${s.producto} ${s.talla}`) && (!soloConteo || s.stock !== null));
+            // Valor a precio de venta (lista, con IVA) de lo que hay en stock; sigue al buscador.
+            const valor = s => Math.max(Number(s.stock) || 0, 0) * Number(s.precio || 0);
+            const totalValor = filas.reduce((t, s) => t + valor(s), 0);
+            const totalPrendas = filas.reduce((t, s) => t + Math.max(Number(s.stock) || 0, 0), 0);
+            const filtrado = filas.length < this.datos.filter(s => !s.es_conjunto).length;
+            franjaValor.hidden = false;
+            franjaValor.innerHTML = `
+                <div class="franja-item">
+                    <span class="lbl">Valor del inventario a precio de venta${filtrado ? ' (según la búsqueda)' : ''}</span>
+                    <strong>${fmtCLP(totalValor)}</strong>
+                    <span class="sub">Lo que se recibiría vendiendo todo el stock a precio de lista (con IVA)</span>
+                </div>
+                <div class="franja-item">
+                    <span class="lbl">Prendas en stock</span>
+                    <strong>${fmtNumero(totalPrendas)}</strong>
+                    <span class="sub">${totalPrendas ? `Precio promedio ${fmtCLP(Math.round(totalValor / totalPrendas))}` : 'Sin stock contado'}</span>
+                </div>`;
             contenedor.innerHTML = tabla([
                 { titulo: 'Establecimiento', valor: s => esc(s.establecimiento) },
                 { titulo: 'Producto', valor: s => esc(s.producto) },
                 { titulo: 'Talla', valor: s => esc(s.talla) },
                 { titulo: 'Stock', clase: 'num', valor: s => `<strong>${fmtNumero(s.stock)}</strong>` },
                 { titulo: 'Mínimo', clase: 'num', valor: s => fmtNumero(s.stock_minimo) },
+                { titulo: 'Valor venta', clase: 'num', valor: s => valor(s) ? `${fmtCLP(valor(s))}<span class="sub">${fmtCLP(s.precio)} c/u</span>` : '—' },
                 { titulo: 'Estado', valor: s => estadoStock(s.stock, s.stock_minimo) },
                 ...(acciones ? [{ titulo: '', clase: 'acciones', valor: s => `
                     <button class="btn btn-small btn-primary" data-sumar="${s.producto_id}|${esc(s.talla)}">+ Sumar</button>
@@ -252,6 +278,106 @@ vistas.inventario = {
             if (tipo === 'material') compartido.refrescar('materiales');
             modal.cerrar();
             aviso('Conteo guardado.');
+            await this.cargar();
+        });
+    },
+
+    // Agregar inventario de un producto, igual que en Catálogo: se elige el
+    // establecimiento y el producto, y se anota cuánto llegó de cada talla.
+    async agregarInventario() {
+        const [productos, establecimientos, stock] = await Promise.all([
+            compartido.obtener('productos'),
+            compartido.obtener('establecimientos'),
+            api.get('/inventario/prendas'),
+        ]);
+        const stockDe = (productoId, talla) => stock.find(s => s.producto_id === productoId && s.talla === talla)?.stock ?? null;
+
+        const caja = modal.abrir('Agregar inventario', `
+            <form>
+                <div class="form-grid">
+                    ${campo('Establecimiento', `<select name="establecimiento_id" required>${opciones(establecimientos, { vacio: 'Elegir...' })}</select>`)}
+                    ${campo('Producto', '<select name="producto_id" required disabled><option value="">Elija primero el establecimiento</option></select>')}
+                </div>
+                <div data-tallas></div>
+                ${PIE_FORM('Agregar al inventario')}
+            </form>`, { ancho: true });
+
+        const form = caja.querySelector('form');
+        const zona = form.querySelector('[data-tallas]');
+        const producto = () => productos.find(p => p.id === num(form.producto_id.value));
+
+        // Total y "quedará" de cada talla al escribir.
+        const recalcular = () => {
+            let unidades = 0, valor = 0;
+            zona.querySelectorAll('tbody tr').forEach(f => {
+                const n = num(f.querySelector('[name=cantidad]').value) || 0;
+                const actual = Number(f.dataset.stock) || 0;
+                f.querySelector('[data-queda]').textContent = n ? fmtNumero(actual + n) : '—';
+                unidades += n;
+                valor += n * Number(f.dataset.precio);
+            });
+            const total = zona.querySelector('[data-total]');
+            if (total) total.innerHTML = unidades
+                ? `Se agregarán <strong>${fmtNumero(unidades)}</strong> prendas · valor de venta <strong>${fmtCLP(valor)}</strong>`
+                : 'Anote la cantidad que llegó de cada talla (las que queden en 0 no se tocan).';
+        };
+
+        const dibujarTallas = () => {
+            const p = producto();
+            if (!p) { zona.innerHTML = ''; return; }
+            const tallas = tallasProducto(p);
+            zona.innerHTML = `
+                <h3>Tallas</h3>
+                ${p.componentes.length ? `<p class="aviso">Es un conjunto: lo que agregue se suma a cada parte (${p.componentes.map(c => esc(c.nombre)).join(' + ')}).</p>` : ''}
+                <div class="filtros">
+                    <input type="number" min="0" step="1" data-misma placeholder="Misma cantidad para todas" aria-label="Misma cantidad para todas">
+                    <button type="button" class="btn btn-small" data-aplicar>Aplicar a todas</button>
+                </div>
+                <table class="lineas">
+                    <thead><tr><th>Talla</th><th class="num">Stock actual</th><th style="width:140px">Cantidad a agregar</th><th class="num">Quedará</th></tr></thead>
+                    <tbody>${tallas.map(t => {
+                        const actual = stockDe(p.id, t.talla);
+                        return `<tr data-talla="${esc(t.talla)}" data-stock="${actual ?? 0}" data-precio="${t.precio}">
+                            <td><strong>${esc(t.talla)}</strong></td>
+                            <td class="num">${actual === null ? '<span class="muted">Sin conteo</span>' : fmtNumero(actual)}</td>
+                            <td><input type="number" name="cantidad" min="0" step="1" placeholder="0"></td>
+                            <td class="num" data-queda>—</td>
+                        </tr>`;
+                    }).join('')}</tbody>
+                </table>
+                <p class="helper-text" data-total></p>`;
+            zona.querySelector('[data-aplicar]').addEventListener('click', () => {
+                const n = zona.querySelector('[data-misma]').value;
+                zona.querySelectorAll('[name=cantidad]').forEach(i => (i.value = n));
+                recalcular();
+            });
+            zona.querySelector('tbody').addEventListener('input', recalcular);
+            recalcular();
+            zona.querySelector('[name=cantidad]')?.focus();
+        };
+
+        form.establecimiento_id.addEventListener('change', () => {
+            const est = num(form.establecimiento_id.value);
+            const lista = productos.filter(p => p.establecimiento_id === est);
+            form.producto_id.disabled = !est;
+            form.producto_id.innerHTML = !est ? '<option value="">Elija primero el establecimiento</option>'
+                : lista.length ? opciones(lista, { vacio: 'Elegir...' })
+                : '<option value="">Este establecimiento no tiene productos</option>';
+            dibujarTallas();
+        });
+        form.producto_id.addEventListener('change', dibujarTallas);
+
+        alEnviar(form, async () => {
+            const p = producto();
+            const tallas = [...zona.querySelectorAll('tbody tr')]
+                .map(f => ({ talla: f.dataset.talla, cantidad: num(f.querySelector('[name=cantidad]').value) || 0 }))
+                .filter(t => t.cantidad > 0);
+            if (!tallas.length) throw new Error('Anote la cantidad de al menos una talla.');
+            await api.post(`/inventario/prendas/${p.id}/sumar`, { tallas });
+            modal.cerrar();
+            aviso(`Se agregaron ${fmtNumero(tallas.reduce((s, t) => s + t.cantidad, 0))} prendas de ${p.nombre}.`);
+            this.pestana = 'prendas';
+            document.querySelectorAll('#view-inventario .tab').forEach(x => x.classList.toggle('active', x.dataset.tab === 'prendas'));
             await this.cargar();
         });
     },

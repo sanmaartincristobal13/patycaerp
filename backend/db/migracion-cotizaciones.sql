@@ -4,7 +4,7 @@
 -- Prepara una base existente para el módulo de cotizaciones:
 --
 --   * Ítems de texto libre: producto, característica (tela, estampado
---     DTF, logos...), cantidad y precio unitario NETO. Ya no es
+--     DTF, logos...), cantidad y precio unitario (con IVA). Ya no es
 --     obligatorio que el ítem sea un producto del catálogo.
 --   * Totales con IVA: NETO, IVA (19 %) y TOTAL en la vista v_cotizaciones.
 --   * Datos del emisor, textos y firma para el PDF (tabla configuracion).
@@ -40,7 +40,9 @@ ALTER TABLE configuracion ADD COLUMN IF NOT EXISTS firma_nombre      text NOT NU
 ALTER TABLE configuracion ADD COLUMN IF NOT EXISTS firma_imagen      text NOT NULL DEFAULT '';   -- PNG/JPG en base64 (data URL)
 
 -- ---------- Totales con IVA ----------
--- Los precios de la cotización son NETOS: TOTAL = NETO + IVA 19 %.
+-- Los precios de la cotización incluyen IVA (iguales al catálogo).
+-- Si la base tenía cotizaciones con precios netos, ejecutar después
+-- migracion-cotizaciones-iva.sql para convertirlas.
 DROP VIEW IF EXISTS v_cotizaciones;
 CREATE VIEW v_cotizaciones AS
 WITH sumas AS (
@@ -53,10 +55,10 @@ WITH sumas AS (
 SELECT
     c.*,
     s.subtotal,
-    greatest(s.subtotal - c.descuento, 0)                                   AS neto,
-    round(greatest(s.subtotal - c.descuento, 0) * 0.19)                     AS iva,
+    round(greatest(s.subtotal - c.descuento, 0) / 1.19)                     AS neto,
     greatest(s.subtotal - c.descuento, 0)
-        + round(greatest(s.subtotal - c.descuento, 0) * 0.19)               AS total
+        - round(greatest(s.subtotal - c.descuento, 0) / 1.19)               AS iva,
+    greatest(s.subtotal - c.descuento, 0)                                   AS total
 FROM cotizaciones c
 JOIN sumas s ON s.id = c.id;
 

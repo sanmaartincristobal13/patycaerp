@@ -108,6 +108,31 @@ router.post('/prendas/:productoId/:talla/sumar', requiereModulo('inventario'), a
     res.status(204).end();
 });
 
+// POST /api/inventario/prendas/:productoId/sumar  { tallas: [{ talla, cantidad }] }
+// Agregar inventario de un producto en varias tallas a la vez (las en 0 se omiten).
+// Un conjunto (Buzo) suma a cada una de sus partes, como en la venta.
+router.post('/prendas/:productoId/sumar', requiereModulo('inventario'), async (req, res) => {
+    const productoId = v.id(req.params.productoId, 'productoId');
+    if (!Array.isArray(req.body.tallas)) throw solicitudInvalida('"tallas" debe ser una lista.');
+    const tallas = req.body.tallas
+        .map(t => ({ talla: v.texto(t.talla, 'talla'), cantidad: v.numero(t.cantidad, 'cantidad', { min: 0, entero: true }) }))
+        .filter(t => t.cantidad > 0);
+    if (!tallas.length) throw solicitudInvalida('Indique la cantidad de al menos una talla.');
+
+    await transaccion(async client => {
+        for (const { talla, cantidad } of tallas) {
+            await moverStockPrenda(client, {
+                productoId, talla, delta: cantidad, tipo: 'Ajuste manual',
+                referencia: 'Agregar inventario', usuarioId: req.usuario.id,
+            });
+        }
+        const total = tallas.reduce((s, t) => s + t.cantidad, 0);
+        await registrarActividad(client, req.usuario.id, 'Inventario', 'Suma',
+            `Agregar inventario: ${total} unidades a prenda ${productoId} (${tallas.map(t => `${t.talla}: ${t.cantidad}`).join(', ')})`);
+    });
+    res.status(204).end();
+});
+
 // POST /api/inventario/materiales/:id/sumar  { cantidad }
 router.post('/materiales/:id/sumar', requiereModulo('inventario'), async (req, res) => {
     const id = v.id(req.params.id);

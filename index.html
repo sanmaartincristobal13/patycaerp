@@ -183,7 +183,7 @@
             <div class="page-head">
                 <div>
                     <h1 class="page-title">Cotizaciones</h1>
-                    <p class="page-desc">Arme la cotización para un colegio, institución o empresa y descárguela en PDF. Los precios se ingresan netos; el IVA se calcula solo.</p>
+                    <p class="page-desc">Arme la cotización para un colegio, institución o empresa y descárguela en PDF. Los precios son los del catálogo (con IVA); el neto y el IVA se separan solos.</p>
                 </div>
                 <div class="head-actions">
                     <button class="btn btn-primary" id="btnNuevaCotizacion">+ Nueva cotización</button>
@@ -232,7 +232,8 @@
                 </div>
                 <div class="head-actions">
                     <button class="btn btn-candado" id="btnEditarInventario" aria-pressed="false">🔒 Editar o sumar inventario</button>
-                    <button class="btn btn-primary" id="btnNuevoMaterial">+ Material</button>
+                    <button class="btn" id="btnNuevoMaterial">+ Material</button>
+                    <button class="btn btn-primary" id="btnAgregarInventario">+ Agregar inventario</button>
                 </div>
             </div>
             <div class="tabs">
@@ -246,6 +247,7 @@
                 <label class="check"><input type="checkbox" id="inventarioSoloConteo"> Solo con conteo</label>
             </div>
             <p class="aviso aviso-candado" id="inventarioCandado"></p>
+            <div class="franja" id="inventarioValor" hidden></div>
             <div class="table-wrap" id="inventarioTabla"></div>
         </section>
 

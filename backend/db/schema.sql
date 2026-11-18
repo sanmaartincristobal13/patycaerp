@@ -230,7 +230,7 @@ CREATE TABLE cotizaciones (
 
 -- Un ítem es un producto del catálogo (producto_id + talla) o texto libre
 -- (descripcion), por ejemplo "Polera deportiva" para una institución.
--- precio_unitario es NETO: el IVA se agrega en v_cotizaciones.
+-- precio_unitario incluye IVA (igual al catálogo): v_cotizaciones separa neto e IVA.
 CREATE TABLE cotizacion_items (
     id               integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     cotizacion_id    integer NOT NULL REFERENCES cotizaciones(id) ON DELETE CASCADE,
@@ -243,6 +243,8 @@ CREATE TABLE cotizacion_items (
     FOREIGN KEY (producto_id, talla) REFERENCES producto_tallas(producto_id, talla),
     CONSTRAINT cotizacion_items_producto_o_descripcion CHECK (producto_id IS NOT NULL OR descripcion <> '')
 );
+-- Marca que usa migracion-cotizaciones-iva.sql para no convertir dos veces.
+COMMENT ON COLUMN cotizacion_items.precio_unitario IS 'Con IVA';
 
 
 -- ======================================================
@@ -596,7 +598,8 @@ JOIN tipos_tela t ON t.id = p.tipo_tela_id
 JOIN producto_tallas pt ON pt.producto_id = f.producto_id AND pt.talla = f.talla
 WHERE f.peso_unitario_g > 0;
 
--- Los precios de la cotización son NETOS: TOTAL = NETO + IVA 19 %.
+-- Los precios de la cotización incluyen IVA (iguales al catálogo):
+-- TOTAL = suma de los ítems; NETO = TOTAL / 1,19; IVA = TOTAL - NETO.
 CREATE VIEW v_cotizaciones AS
 WITH sumas AS (
     SELECT c.id,
@@ -608,9 +611,9 @@ WITH sumas AS (
 SELECT
     c.*,
     s.subtotal,
-    greatest(s.subtotal - c.descuento, 0)                                   AS neto,
-    round(greatest(s.subtotal - c.descuento, 0) * 0.19)                     AS iva,
+    round(greatest(s.subtotal - c.descuento, 0) / 1.19)                     AS neto,
     greatest(s.subtotal - c.descuento, 0)
-        + round(greatest(s.subtotal - c.descuento, 0) * 0.19)               AS total
+        - round(greatest(s.subtotal - c.descuento, 0) / 1.19)               AS iva,
+    greatest(s.subtotal - c.descuento, 0)                                   AS total
 FROM cotizaciones c
 JOIN sumas s ON s.id = c.id;
